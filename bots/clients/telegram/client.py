@@ -37,10 +37,14 @@ class TelegramClient(ClientAdapter):
         if not token:
             raise ValueError("No bot token")
 
+        from config import get_config
+
+        cfg = get_config()
+
         self._bot = pyrogram.Client(
             name="wzml_bot",
-            api_id=0,
-            api_hash="",
+            api_id=cfg.telegram.API,
+            api_hash=cfg.telegram.HASH,
             bot_token=token,
         )
         await self._bot.start()
