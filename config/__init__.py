@@ -48,57 +48,49 @@ def load_configs():
     telegram_cfg = TelegramConfig()
     if "telegram" in config_data:
         telegram_cfg._load_from_attrs(config_data["telegram"])
-    else:
-        telegram_cfg.load()
+    telegram_cfg.load()
     ALL_CONFIGS["telegram"] = telegram_cfg
 
     database_cfg = DatabaseConfig()
     if "database" in config_data:
         database_cfg._load_from_attrs(config_data["database"])
-    else:
-        database_cfg.load()
+    database_cfg.load()
     ALL_CONFIGS["database"] = database_cfg
 
     limits_cfg = LimitsConfig()
     if "limits" in config_data:
         limits_cfg._load_from_attrs(config_data["limits"])
-    else:
-        limits_cfg.load()
+    limits_cfg.load()
     ALL_CONFIGS["limits"] = limits_cfg
 
     task_tools_cfg = TaskToolsConfig()
     if "task_tools" in config_data:
         task_tools_cfg._load_from_attrs(config_data["task_tools"])
-    else:
-        task_tools_cfg.load()
+    task_tools_cfg.load()
     ALL_CONFIGS["task_tools"] = task_tools_cfg
 
     gdrive_cfg = GDriveConfig()
     if "gdrive" in config_data:
         gdrive_cfg._load_from_attrs(config_data["gdrive"])
-    else:
-        gdrive_cfg.load()
+    gdrive_cfg.load()
     ALL_CONFIGS["gdrive"] = gdrive_cfg
 
     rclone_cfg = RcloneConfig()
     if "rclone" in config_data:
         rclone_cfg._load_from_attrs(config_data["rclone"])
-    else:
-        rclone_cfg.load()
+    rclone_cfg.load()
     ALL_CONFIGS["rclone"] = rclone_cfg
 
     mega_cfg = MegaConfig()
     if "mega" in config_data:
         mega_cfg._load_from_attrs(config_data["mega"])
-    else:
-        mega_cfg.load()
+    mega_cfg.load()
     ALL_CONFIGS["mega"] = mega_cfg
 
     jd_cfg = JDownloaderConfig()
     if "jdownloader" in config_data:
         jd_cfg._load_from_attrs(config_data["jdownloader"])
-    else:
-        jd_cfg.load()
+    jd_cfg.load()
     ALL_CONFIGS["jdownloader"] = jd_cfg
 
     leech_cfg = LeechConfig()
@@ -111,57 +103,49 @@ def load_configs():
     logs_cfg = LogsConfig()
     if "logs" in config_data:
         logs_cfg._load_from_attrs(config_data["logs"])
-    else:
-        logs_cfg.load()
+    logs_cfg.load()
     ALL_CONFIGS["logs"] = logs_cfg
 
     rss_cfg = RSSConfig()
     if "rss" in config_data:
         rss_cfg._load_from_attrs(config_data["rss"])
-    else:
-        rss_cfg.load()
+    rss_cfg.load()
     ALL_CONFIGS["rss"] = rss_cfg
 
     search_cfg = SearchConfig()
     if "search" in config_data:
         search_cfg._load_from_attrs(config_data["search"])
-    else:
-        search_cfg.load()
+    search_cfg.load()
     ALL_CONFIGS["search"] = search_cfg
 
     bot_settings_cfg = BotSettingsConfig()
     if "bot_settings" in config_data:
         bot_settings_cfg._load_from_attrs(config_data["bot_settings"])
-    else:
-        bot_settings_cfg.load()
+    bot_settings_cfg.load()
     ALL_CONFIGS["bot_settings"] = bot_settings_cfg
 
     disable_cfg = DisableConfig()
     if "disable" in config_data:
         disable_cfg._load_from_attrs(config_data["disable"])
-    else:
-        disable_cfg.load()
+    disable_cfg.load()
     ALL_CONFIGS["disable"] = disable_cfg
 
     telegraph_cfg = TelegraphConfig()
     if "telegraph" in config_data:
         telegraph_cfg._load_from_attrs(config_data["telegraph"])
-    else:
-        telegraph_cfg.load()
+    telegraph_cfg.load()
     ALL_CONFIGS["telegraph"] = telegraph_cfg
 
     yt_cfg = YTConfig()
     if "yt" in config_data:
         yt_cfg._load_from_attrs(config_data["yt"])
-    else:
-        yt_cfg.load()
+    yt_cfg.load()
     ALL_CONFIGS["yt"] = yt_cfg
 
     update_cfg = UpdateConfig()
     if "update" in config_data:
         update_cfg._load_from_attrs(config_data["update"])
-    else:
-        update_cfg.load()
+    update_cfg.load()
     ALL_CONFIGS["update"] = update_cfg
 
     for name in ALL_CONFIGS:

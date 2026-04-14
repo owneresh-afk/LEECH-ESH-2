@@ -1,7 +1,7 @@
 import os
 import logging
 from typing import Any, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger("wzml.config")
 
@@ -19,8 +19,11 @@ class BaseConfig:
         self._loaded = False
 
     def _get_env(self, key: str, default: Any = None, value_type: type = None) -> Any:
-        env_key = f"{self._prefix}{key}" if self._prefix else key
-        value = os.getenv(env_key, default)
+        prefix = self.__class__._prefix if hasattr(self.__class__, "_prefix") else ""
+        env_key = f"{prefix}{key}" if prefix else key
+        value = os.getenv(env_key)
+        if value is None:
+            value = default
         if value is None:
             return default
         if value_type and value and value_type != str:
@@ -46,8 +49,9 @@ class BaseConfig:
 
     def _load_from_attrs(self, attrs: dict):
         for key, value in attrs.items():
-            if not key.startswith("_"):
-                setattr(self, key, value)
+            if not key.startswith("_") and key not in ("_prefix", "_group_name"):
+                if value is not None and value != "" and value != [] and value != {}:
+                    setattr(self, key, value)
 
     def get(self, key: str, default: Any = None) -> Any:
         return getattr(self, key, default)
