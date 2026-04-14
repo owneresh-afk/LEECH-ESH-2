@@ -58,6 +58,7 @@ class TelegramClient(ClientAdapter):
         logger.info(f"Bot started: @{me.username}")
 
         self._register_handlers()
+        await self._register_pyrogram_handlers()
 
         self._running = True
         logger.info(f"Telegram client initialized with {len(self._handlers)} handlers")
@@ -169,6 +170,32 @@ class TelegramClient(ClientAdapter):
             "imdb": imdb.handle,
             "help": help_cmd.handle,
         }
+
+    async def _register_pyrogram_handlers(self):
+        """Register message handlers with pyrogram client"""
+        import re
+        from pyrogram import filters
+
+        @self._bot.on_message(filters.command(list(self._handlers.keys())))
+        async def handle_message(client, message):
+            command = message.command[0].lower()
+            if command in self._handlers:
+                from bots.clients.telegram.handlers import CommandContext
+
+                context = CommandContext(
+                    chat_id=message.chat.id,
+                    user_id=message.from_user.id,
+                    message_id=message.id,
+                    text=message.text or "",
+                    reply_to_message=message.reply_to_message,
+                )
+                try:
+                    await self._handlers[command](context, self)
+                except Exception as e:
+                    logger.error(f"Handler error for {command}: {e}")
+                    import traceback
+
+                    traceback.print_exc()
 
     async def send_message(
         self,
