@@ -50,8 +50,7 @@ class BaseConfig:
     def _load_from_attrs(self, attrs: dict):
         for key, value in attrs.items():
             if not key.startswith("_") and key not in ("_prefix", "_group_name"):
-                if value is not None and value != "" and value != [] and value != {}:
-                    setattr(self, key, value)
+                setattr(self, key, value)
 
     def get(self, key: str, default: Any = None) -> Any:
         return getattr(self, key, default)
