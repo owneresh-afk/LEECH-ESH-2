@@ -31,14 +31,22 @@ class ExtractorProcessor(ProcessorPlugin):
         if not os.path.exists(source):
             return PluginResult(success=False, error="File not found")
 
+        from core.task import update_task_progress
+        await update_task_progress(
+            task_id=context.task_id,
+            stage="Extracting",
+            plugin=self.name,
+            progress=0.0
+        )
+
         try:
             extracted_files = []
 
             if source.endswith(".zip"):
-                result = await self._extract_zip(source, output_path, password)
+                result = await asyncio.to_thread(self._extract_zip, source, output_path, password)
                 extracted_files = result.get("files", [])
             elif source.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2")):
-                result = await self._extract_tar(source, output_path)
+                result = await asyncio.to_thread(self._extract_tar, source, output_path)
                 extracted_files = result.get("files", [])
             elif source.endswith(".7z"):
                 result = await self._extract_7z(source, output_path, password)
@@ -48,6 +56,13 @@ class ExtractorProcessor(ProcessorPlugin):
                 extracted_files = result.get("files", [])
             else:
                 return PluginResult(success=False, error="Unsupported archive format")
+
+            await update_task_progress(
+                task_id=context.task_id,
+                stage="Extracting",
+                plugin=self.name,
+                progress=100.0
+            )
 
             return PluginResult(
                 success=True,
@@ -60,7 +75,7 @@ class ExtractorProcessor(ProcessorPlugin):
             logger.error(f"Extraction error: {e}")
             return PluginResult(success=False, error=str(e))
 
-    async def _extract_zip(
+    def _extract_zip(
         self, archive_path: str, output_path: str, password: str = None
     ) -> dict:
         files = []
@@ -74,7 +89,7 @@ class ExtractorProcessor(ProcessorPlugin):
 
         return {"files": files, "path": output_path}
 
-    async def _extract_tar(self, archive_path: str, output_path: str) -> dict:
+    def _extract_tar(self, archive_path: str, output_path: str) -> dict:
         files = []
 
         with tarfile.open(archive_path, "r") as tf:

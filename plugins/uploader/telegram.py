@@ -47,8 +47,8 @@ class TelegramUploader(UploaderPlugin):
             return False
 
     async def upload(self, context: PluginContext, config: dict) -> PluginResult:
-        chat_id = config.get("chat_id")
-        caption = config.get("caption", "")
+        chat_id = config.get("chat_id") or context.metadata.get("chat_id")
+        caption = config.get("caption", "") or context.metadata.get("caption", "")
         thumb = config.get("thumb")
 
         if not chat_id:
@@ -59,38 +59,69 @@ class TelegramUploader(UploaderPlugin):
             return PluginResult(success=False, error="File not found")
 
         try:
+            from core.task import update_task_progress
+            import time
+            import os
+
             file_name = os.path.basename(file_path)
             file_ext = os.path.splitext(file_path)[1].lower()
+            start_time = time.time()
+            last_update = start_time
+
+            async def progress_callback(current, total):
+                nonlocal last_update
+                now = time.time()
+                if now - last_update > 1.0:
+                    speed = current / (now - start_time) if now > start_time else 0
+                    eta = int((total - current) / speed) if speed > 0 and total else 0
+                    pct = (current / total) * 100 if total else 0.0
+
+                    await update_task_progress(
+                        task_id=context.task_id,
+                        stage="Uploading",
+                        plugin=self.name,
+                        progress=pct,
+                        speed=speed,
+                        eta=eta,
+                        uploaded=current,
+                        total=total,
+                    )
+                    last_update = now
 
             if file_ext in [".jpg", ".jpeg", ".png", ".gif"]:
                 msg = await self._bot.send_photo(
                     chat_id=chat_id,
                     photo=file_path,
                     caption=caption,
+                    progress=progress_callback,
                 )
             elif file_ext in [".mp4", ".mkv", ".avi", ".mov"]:
                 msg = await self._bot.send_video(
                     chat_id=chat_id,
                     video=file_path,
                     caption=caption,
+                    progress=progress_callback,
                 )
             elif file_ext in [".mp3", ".ogg", ".m4a", ".wav"]:
                 msg = await self._bot.send_audio(
                     chat_id=chat_id,
                     audio=file_path,
                     caption=caption,
+                    progress=progress_callback,
                 )
             elif file_ext in [".pdf", ".doc", ".docx", ".txt"]:
                 msg = await self._bot.send_document(
                     chat_id=chat_id,
                     document=file_path,
                     caption=caption,
+                    progress=progress_callback,
                 )
             else:
                 msg = await self._bot.send_document(
                     chat_id=chat_id,
                     document=file_path,
                     caption=caption,
+                    progress=progress_callback,
                 )
 
             return PluginResult(

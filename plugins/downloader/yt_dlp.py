@@ -52,6 +52,54 @@ class YTDLPDownloader(DownloaderPlugin):
 
         try:
             import yt_dlp
+            import time
+            from core.task import update_task_progress
+
+            loop = asyncio.get_running_loop()
+            last_update = 0
+
+            def progress_hook(d):
+                nonlocal last_update
+                now = time.time()
+
+                try:
+                    from core.task import get_tasks
+
+                    # Check task status synchronously by directly accessing the store since we're in a thread
+                    from core.task import _task_store
+
+                    t = _task_store.get(context.task_id)
+                    if t and t.status.value == "cancelled":
+                        raise Exception("Task cancelled by user")
+                except Exception as e:
+                    if str(e) == "Task cancelled by user":
+                        raise
+
+                if d["status"] == "downloading":
+                    if now - last_update < 1.0:
+                        return
+                    last_update = now
+
+                    downloaded = d.get("downloaded_bytes", 0)
+                    total = d.get("total_bytes") or d.get("total_bytes_estimate", 0)
+                    speed = d.get("speed", 0)
+                    eta = d.get("eta", 0)
+
+                    pct = (downloaded / total) * 100 if total else 0.0
+
+                    asyncio.run_coroutine_threadsafe(
+                        update_task_progress(
+                            task_id=context.task_id,
+                            stage="Downloading",
+                            plugin=self.name,
+                            progress=pct,
+                            speed=speed or 0.0,
+                            eta=eta or 0,
+                            downloaded=downloaded,
+                            total=total,
+                        ),
+                        loop,
+                    )
 
             ydl_opts = {
                 "format": format_opt
@@ -63,6 +111,7 @@ class YTDLPDownloader(DownloaderPlugin):
                 "ignoreerrors": False,
                 "no_warnings": True,
                 "quiet": False,
+                "progress_hooks": [progress_hook],
             }
 
             if not playlist:
@@ -79,48 +128,49 @@ class YTDLPDownloader(DownloaderPlugin):
             if config.get("fragment_retries"):
                 ydl_opts["fragment_retries"] = config["fragment_retries"]
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
+            def _download():
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    if info is None:
+                        raise Exception("Failed to extract info")
+                    return info, ydl.prepare_filename(info)
 
-                if info is None:
-                    return PluginResult(success=False, error="Failed to extract info")
+            info, output_file = await asyncio.to_thread(_download)
 
-                result = {
-                    "url": url,
-                    "title": info.get("title"),
-                    "id": info.get("id"),
-                    "thumbnail": info.get("thumbnail"),
-                    "description": info.get("description"),
-                    "duration": info.get("duration"),
-                    "upload_date": info.get("upload_date"),
-                    "uploader": info.get("uploader"),
-                    "view_count": info.get("view_count"),
-                    "like_count": info.get("like_count"),
-                    "channel": info.get("channel"),
-                    "channel_id": info.get("channel_id"),
-                    "format": info.get("format"),
-                    "resolution": info.get("resolution"),
-                    "filesize": info.get("filesize") or info.get("filesize_approx"),
-                }
+            result = {
+                "url": url,
+                "title": info.get("title"),
+                "id": info.get("id"),
+                "thumbnail": info.get("thumbnail"),
+                "description": info.get("description"),
+                "duration": info.get("duration"),
+                "upload_date": info.get("upload_date"),
+                "uploader": info.get("uploader"),
+                "view_count": info.get("view_count"),
+                "like_count": info.get("like_count"),
+                "channel": info.get("channel"),
+                "channel_id": info.get("channel_id"),
+                "format": info.get("format"),
+                "resolution": info.get("resolution"),
+                "filesize": info.get("filesize") or info.get("filesize_approx"),
+            }
 
-                if info.get("_type") == "playlist":
-                    result["entries"] = [
-                        {
-                            "title": e.get("title"),
-                            "id": e.get("id"),
-                            "duration": e.get("duration"),
-                        }
-                        for e in info.get("entries", [])
-                    ]
-                    result["playlist_count"] = len(info.get("entries", []))
+            if info.get("_type") == "playlist":
+                result["entries"] = [
+                    {
+                        "title": e.get("title"),
+                        "id": e.get("id"),
+                        "duration": e.get("duration"),
+                    }
+                    for e in info.get("entries", [])
+                ]
+                result["playlist_count"] = len(info.get("entries", []))
 
-                output_file = ydl.prepare_filename(info)
-
-                return PluginResult(
-                    success=True,
-                    output_path=output_file,
-                    metadata=result,
-                )
+            return PluginResult(
+                success=True,
+                output_path=output_file,
+                metadata=result,
+            )
 
         except Exception as e:
             logger.error(f"yt-dlp download error: {e}")

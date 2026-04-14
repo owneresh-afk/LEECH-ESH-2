@@ -1,21 +1,65 @@
-"""Mirror, Leech, Ytdlp, Clone handlers"""
+"""Mirror, Leech, Ytdlp, Clone handlers - API first approach"""
 
 import logging
 from typing import Optional, Any
 from dataclasses import dataclass
 
 from core.task import Task, TaskStatus, create_task, get_tasks, cancel_task
-from core.queue import enqueue_task
-from core.status_utils import get_readable_file_size, get_status_buttons
-from bots.clients.telegram.helpers.message_utils import (
-    arg_parser,
-    is_gdrive_link,
-    pre_task_check,
-)
+from core.queue import enqueue_task, get_queue_manager
+from bots.clients.telegram.helpers.message_utils import arg_parser
 from bots.clients.telegram.helpers.button_utils import ButtonMaker
 from bots.clients.telegram.handlers import BotHandler, CommandContext
 
 logger = logging.getLogger("wzml.bot.handlers.mirror")
+
+MIRROR_USAGE = """<b>Mirror/Leech Usage</b>
+
+<i>Direct Links:</i>
+/mirror <link> - Mirror to cloud
+/leech <link> - Leech to telegram
+
+<i>Torrents:</i>
+/qb_mirror <link> - QBitTorrent mirror
+/qb_leech <link> - QBitTorrent leech
+/jd_mirror <link> - JDownloader mirror
+/jd_leech <link> - JDownloader leech
+/nzb_mirror <link> - NZB mirror
+/nzb_leech <link> - NZB leech
+
+<i>Options:</i>
+-d <dir> - Destination folder
+-i <num> - Number of links (bulk)
+-s - Skip file selection
+-b - Batch mode
+-doc - Upload as document
+-med - Upload as media
+-z - Extract archive
+-f - Force upload
+-ss - Stop seeding after upload
+-m <name> - Multi tag name
+-n <name> - Subfolder name
+"""
+
+YTDLP_USAGE = """<b>YT-DLP Usage</b>
+
+/ytdl <url> - Download video to cloud
+/ytdl_leech <url> - Download video to telegram
+
+<b>Options:</b>
+-q <quality> - Video quality (default: best)
+"""
+
+CLONE_USAGE = """<b>Clone Usage</b>
+
+/clone <gdrive_link> - Clone Google Drive folder
+"""
+
+STATUS_USAGE = """<b>Status Usage</b>
+
+/status - Show all active tasks
+/status me - Show your tasks
+/status <user_id> - Show specific user's tasks
+"""
 
 
 @dataclass
@@ -35,92 +79,55 @@ class MirrorHandler(BotHandler):
         is_qbit: bool = False,
         is_jd: bool = False,
         is_nzb: bool = False,
-        is_uphoster: bool = False,
     ) -> MirrorResult:
         args = arg_parser(context.text)
-        link = args.get("link", "")
+        link = args.get("link", "").strip()
 
-        check_msg, check_button = pre_task_check(context.text)
-        if check_msg:
-            await client.send_message(context.chat_id, check_msg, check_button)
-            return MirrorResult(message=check_msg)
-
-        flags = {
-            "-doc": args.get("-doc", False),
-            "-med": args.get("-med", False),
-            "-d": args.get("-d", False),
-            "-j": args.get("-j", False),
-            "-s": args.get("-s", False),
-            "-b": args.get("-b", False),
-            "-e": args.get("-e", False),
-            "-z": args.get("-z", False),
-            "-sv": args.get("-sv", False),
-            "-ss": args.get("-ss", False),
-            "-f": args.get("-f", False),
-            "-fd": args.get("-fd", False),
-            "-fu": args.get("-fu", False),
-            "-hl": args.get("-hl", False),
-            "-bt": args.get("-bt", False),
-            "-ut": args.get("-ut", False),
-            "-yt": args.get("-yt", False),
-            "-i": int(args.get("-i", 0)),
-            "-sp": int(args.get("-sp", 0)),
-            "-n": args.get("-n", ""),
-            "-m": args.get("-m", ""),
-            "-meta": args.get("-meta", ""),
-            "-up": args.get("-up", ""),
-            "-rcf": args.get("-rcf", ""),
-            "-t": args.get("-t", ""),
-            "-ca": args.get("-ca", ""),
-            "-cv": args.get("-cv", ""),
-            "-ns": args.get("-ns", ""),
-            "-tl": args.get("-tl", ""),
-            "-h": args.get("-h", ""),
-        }
+        if not link:
+            await client.send_message(context.chat_id, MIRROR_USAGE, parse_mode="html")
+            return MirrorResult()
 
         if is_qbit:
-            pipeline_id = "torrent_gdrive"
+            pipeline_id = "qb_leech" if is_leech else "qb_mirror"
         elif is_jd:
-            pipeline_id = "jd_gdrive"
+            pipeline_id = "jd_leech" if is_leech else "jd_mirror"
         elif is_nzb:
-            pipeline_id = "nzb_gdrive"
-        elif is_uphoster:
-            pipeline_id = "uphosted_gofile"
+            pipeline_id = "nzb_leech" if is_leech else "nzb_mirror"
         elif is_leech:
             pipeline_id = "telegram"
         else:
-            pipeline_id = "download_upload"
+            pipeline_id = "gdrive"
 
-        destination = args.get("-d", "")
+        metadata = {
+            "is_leech": is_leech,
+            "is_qbit": is_qbit,
+            "is_jd": is_jd,
+            "is_nzb": is_nzb,
+            "flags": args,
+            "chat_id": context.chat_id,
+            "user_id": context.user_id,
+        }
 
         task = await create_task(
             source=link,
             pipeline_id=pipeline_id,
             user_id=context.user_id,
-            destination=destination,
-            metadata={
-                "is_leech": is_leech,
-                "is_qbit": is_qbit,
-                "is_jd": is_jd,
-                "is_nzb": is_nzb,
-                "flags": flags,
-            },
+            destination=args.get("d", ""),
+            metadata=metadata,
         )
 
         await enqueue_task(task)
 
         buttons = ButtonMaker()
-        buttons.data_button("Cancel", f"cancel {task.id}")
+        buttons.data_button("Cancel", f"cancel {task.id[:20]}")
         reply_markup = buttons.build_menu(1)
 
-        msg = f"Task Queued:\n\nID: {task.id}\n"
+        msg = f"<b>Task Queued</b>\n\n"
+        msg += f"ID: <code>{task.id[:20]}</code>\n"
         msg += f"Mode: {'Leech' if is_leech else 'Mirror'}\n"
         msg += f"Source: {link[:100]}"
 
-        if link.startswith("http"):
-            msg += f"\nSize: Calculating..."
-
-        await client.send_message(context.chat_id, msg, reply_markup)
+        await client.send_message(context.chat_id, msg, reply_markup, parse_mode="html")
 
         return MirrorResult(task=task, message=msg)
 
@@ -135,37 +142,40 @@ class YtdlpHandler(BotHandler):
         is_leech: bool = False,
     ) -> MirrorResult:
         args = arg_parser(context.text)
-        link = args.get("link", "")
+        link = args.get("link", "").strip()
 
         if not link:
-            await client.send_message(
-                context.chat_id,
-                "Send Link along with command!\n\n/mirror https://youtu.be/...",
-            )
+            await client.send_message(context.chat_id, YTDLP_USAGE, parse_mode="html")
             return MirrorResult()
 
-        quality = args.get("-q", "bestvideo+bestaudio/best")
         pipeline_id = "yt_telegram" if is_leech else "yt_gdrive"
+        quality = args.get("q", "bestvideo+bestaudio/best")
+
+        metadata = {
+            "quality": quality,
+            "is_leech": is_leech,
+            "chat_id": context.chat_id,
+            "user_id": context.user_id,
+        }
 
         task = await create_task(
             source=link,
             pipeline_id=pipeline_id,
             user_id=context.user_id,
-            metadata={
-                "quality": quality,
-                "thumbnail": True,
-                "is_leech": is_leech,
-            },
+            metadata=metadata,
         )
 
         await enqueue_task(task)
 
         buttons = ButtonMaker()
-        buttons.data_button("Cancel", f"cancel {task.id}")
+        buttons.data_button("Cancel", f"cancel {task.id[:20]}")
         reply_markup = buttons.build_menu(1)
 
-        msg = f"YouTube Download Started\n\nTask ID: {task.id[:20]}\nQuality: {quality}"
-        await client.send_message(context.chat_id, msg, reply_markup)
+        msg = f"<b>YouTube Download Started</b>\n\n"
+        msg += f"ID: <code>{task.id[:20]}</code>\n"
+        msg += f"Quality: {quality}"
+
+        await client.send_message(context.chat_id, msg, reply_markup, parse_mode="html")
 
         return MirrorResult(task=task, message=msg)
 
@@ -179,29 +189,43 @@ class CloneHandler(BotHandler):
         client: Any,
     ) -> MirrorResult:
         args = arg_parser(context.text)
-        link = args.get("link", "")
+        link = args.get("link", "").strip()
 
-        if not is_gdrive_link(link):
+        if not link:
+            await client.send_message(context.chat_id, CLONE_USAGE, parse_mode="html")
+            return MirrorResult()
+
+        if "drive.google.com" not in link and "docs.google.com" not in link:
             await client.send_message(
                 context.chat_id,
-                "Send GDrive Link along with /clone Command!",
+                "<b>Invalid GDrive Link!</b>\n\nSend a valid Google Drive link.",
+                parse_mode="html",
             )
             return MirrorResult()
+
+        metadata = {
+            "chat_id": context.chat_id,
+            "user_id": context.user_id,
+        }
 
         task = await create_task(
             source=link,
             pipeline_id="gdrive_clone",
             user_id=context.user_id,
+            metadata=metadata,
         )
 
         await enqueue_task(task)
 
         buttons = ButtonMaker()
-        buttons.data_button("Cancel", f"cancel {task.id}")
+        buttons.data_button("Cancel", f"cancel {task.id[:20]}")
         reply_markup = buttons.build_menu(1)
 
-        msg = f"Clone Started\n\nTask ID: {task.id[:20]}\nSource: {link[:100]}"
-        await client.send_message(context.chat_id, msg, reply_markup)
+        msg = f"<b>Clone Started</b>\n\n"
+        msg += f"ID: <code>{task.id[:20]}</code>\n"
+        msg += f"Source: {link[:100]}"
+
+        await client.send_message(context.chat_id, msg, reply_markup, parse_mode="html")
 
         return MirrorResult(task=task, message=msg)
 
@@ -213,34 +237,49 @@ class CancelHandler(BotHandler):
         self,
         context: CommandContext,
         client: Any,
-        task_id: str = None,
     ) -> Optional[Task]:
-        task = None
-        text = context.text
-        args = arg_parser(text)
-        task_id = args.get("link", "") or task_id
+        args = arg_parser(context.text)
+        task_id = args.get("link", "").strip()
 
         if task_id:
-            task = await cancel_task(task_id)
-            if task:
-                msg = f"Task Cancelled\n\n{task.id[:20]}"
-                await client.send_message(context.chat_id, msg)
-                return task
+            if task_id.isdigit():
+                tasks = await get_tasks(
+                    user_id=int(task_id), status=TaskStatus.RUNNING, limit=1
+                )
+            else:
+                try:
+                    task = await cancel_task(task_id)
+                    if task:
+                        await client.send_message(
+                            context.chat_id,
+                            f"<b>Task Cancelled</b>\n\nID: <code>{task.id[:20]}</code>",
+                            parse_mode="html",
+                        )
+                        return task
+                except Exception:
+                    pass
 
-        tasks = await get_tasks(
-            user_id=context.user_id,
-            status=TaskStatus.RUNNING,
-            limit=1,
-        )
+                tasks = await get_tasks(
+                    user_id=context.user_id, status=TaskStatus.RUNNING, limit=1
+                )
+        else:
+            tasks = await get_tasks(
+                user_id=context.user_id, status=TaskStatus.RUNNING, limit=1
+            )
 
         if tasks:
             task = tasks[0]
-            task.cancel()
-            msg = f"Task Cancelled\n\n{task.id[:20]}"
-            await client.send_message(context.chat_id, msg)
+            await get_queue_manager().cancel(task.id)
+            await client.send_message(
+                context.chat_id,
+                f"<b>Task Cancelled</b>\n\nID: <code>{task.id[:20]}</code>",
+                parse_mode="html",
+            )
             return task
 
-        await client.send_message(context.chat_id, "No Running Task Found!")
+        await client.send_message(
+            context.chat_id, "<b>No Running Task Found!</b>", parse_mode="html"
+        )
         return None
 
 
@@ -253,19 +292,16 @@ class CancelAllHandler(BotHandler):
         client: Any,
     ) -> int:
         tasks = await get_tasks(
-            user_id=context.user_id,
-            status=TaskStatus.RUNNING,
-            limit=50,
+            user_id=context.user_id, status=TaskStatus.RUNNING, limit=50
         )
 
         count = 0
         for task in tasks:
-            task.cancel()
+            await get_queue_manager().cancel(task.id)
             count += 1
 
         await client.send_message(
-            context.chat_id,
-            f"{count} Tasks Cancelled!",
+            context.chat_id, f"<b>{count} Tasks Cancelled!</b>", parse_mode="html"
         )
         return count
 

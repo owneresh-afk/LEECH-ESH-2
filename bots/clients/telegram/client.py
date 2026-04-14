@@ -135,6 +135,7 @@ class TelegramClient(ClientAdapter):
         help_cmd = HelpHandler()
 
         self._handlers = {
+            "start": lambda c, c2: help_cmd.handle(c, c2),
             "mirror": mirror.handle,
             "leech": lambda c, c2: mirror.handle(c, c2, is_leech=True),
             "qb_mirror": lambda c, c2: mirror.handle(c, c2, is_qbit=True),
@@ -176,26 +177,49 @@ class TelegramClient(ClientAdapter):
         import re
         from pyrogram import filters
 
-        @self._bot.on_message(filters.command(list(self._handlers.keys())))
+        commands = list(self._handlers.keys())
+        logger.info(f"Registering commands: {commands}")
+
+        @self._bot.on_message(filters.command(commands) & filters.private)
         async def handle_message(client, message):
-            command = message.command[0].lower()
+            logger.info(f"Received message: {message.text}")
+            command = message.command[0].lower() if message.command else ""
+            logger.info(f"Command: {command}")
+
+            from config import get_config
+
+            cfg = get_config()
+            user_id = message.from_user.id if message.from_user else 0
+            owner_id = cfg.telegram.OWNER_ID
+
+            logger.info(f"User: {user_id}, Owner: {owner_id}")
+
+            sudo_users = cfg.telegram.SUDO_USERS or []
+            if owner_id and user_id != owner_id and user_id not in sudo_users:
+                logger.warning(f"Unauthorized user {user_id} (owner: {owner_id})")
+                await message.reply("Unauthorized")
+                return
+
             if command in self._handlers:
                 from bots.clients.telegram.handlers import CommandContext
 
                 context = CommandContext(
                     chat_id=message.chat.id,
-                    user_id=message.from_user.id,
+                    user_id=message.from_user.id if message.from_user else 0,
                     message_id=message.id,
                     text=message.text or "",
                     reply_to_message=message.reply_to_message,
                 )
                 try:
                     await self._handlers[command](context, self)
+                    logger.info(f"Handled command: {command}")
                 except Exception as e:
                     logger.error(f"Handler error for {command}: {e}")
                     import traceback
 
                     traceback.print_exc()
+            else:
+                logger.warning(f"Command {command} not in handlers")
 
     async def send_message(
         self,

@@ -20,13 +20,13 @@ class BaseConfig:
 
     def _get_env(self, key: str, default: Any = None, value_type: type = None) -> Any:
         current_value = getattr(self, key, None)
-        use_default = current_value if current_value is not None else default
+        use_default = current_value if current_value not in (None, "") else default
         prefix = self.__class__._prefix if hasattr(self.__class__, "_prefix") else ""
         env_key = f"{prefix}{key}" if prefix else key
         value = os.getenv(env_key)
-        if value is None:
+        if value is None or value == "":
             value = use_default
-        if value is None:
+        if value is None or value == "":
             return default
         if value_type and value and value_type != str:
             try:

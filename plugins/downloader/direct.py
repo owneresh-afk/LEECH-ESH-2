@@ -57,6 +57,10 @@ class DirectDownloader(DownloaderPlugin):
             if not os.path.exists(output_path):
                 os.makedirs(output_path, exist_ok=True)
 
+            from core.task import update_task_progress
+            import time
+            import aiohttp
+
             async with aiohttp.ClientSession() as session:
                 req_headers = self._headers.copy()
                 req_headers.update(headers)
@@ -72,9 +76,51 @@ class DirectDownloader(DownloaderPlugin):
 
                     with open(output_file, "wb") as f:
                         downloaded = 0
+                        start_time = time.time()
+                        last_update = start_time
+
+                        from core.task import get_task
+
                         async for chunk in response.content.iter_chunked(chunk_size):
+                            # Check cancellation
+                            t = await get_task(context.task_id)
+                            if t and t.status.value == "cancelled":
+                                return PluginResult(
+                                    success=False, error="Task cancelled by user"
+                                )
+
                             f.write(chunk)
                             downloaded += len(chunk)
+
+                            now = time.time()
+                            if now - last_update > 1.0:
+                                speed = (
+                                    downloaded / (now - start_time)
+                                    if now > start_time
+                                    else 0
+                                )
+                                eta = (
+                                    int((total_size - downloaded) / speed)
+                                    if speed > 0 and total_size
+                                    else 0
+                                )
+                                pct = (
+                                    (downloaded / total_size) * 100
+                                    if total_size
+                                    else 0.0
+                                )
+
+                                await update_task_progress(
+                                    task_id=context.task_id,
+                                    stage="Downloading",
+                                    plugin=self.name,
+                                    progress=pct,
+                                    speed=speed,
+                                    eta=eta,
+                                    downloaded=downloaded,
+                                    total=total_size,
+                                )
+                                last_update = now
 
                     result = {
                         "url": url,

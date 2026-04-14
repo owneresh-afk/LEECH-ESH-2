@@ -61,11 +61,74 @@ class Aria2Downloader(DownloaderPlugin):
                 with open(url, "rb") as tf:
                     torrent_data = tf.read()
                 encoded = base64.b64encode(torrent_data).decode()
-                self._gid = await self._client.add_torrent(encoded, options=a2c_opt)
+                self._gid = await asyncio.to_thread(
+                    self._client.add_torrent, encoded, options=a2c_opt
+                )
             else:
-                self._gid = await self._client.add_uri([url], options=a2c_opt)
+                self._gid = await asyncio.to_thread(
+                    self._client.add_uri, [url], options=a2c_opt
+                )
 
-            download = await self._client.get_download(self._gid)
+            # Since aria2p's client methods are mostly synchronous over requests, we use to_thread to avoid blocking
+            if hasattr(self._gid, "gid"):
+                self._gid = self._gid.gid
+            elif (
+                isinstance(self._gid, list)
+                and len(self._gid) > 0
+                and hasattr(self._gid[0], "gid")
+            ):
+                self._gid = self._gid[0].gid
+
+            from core.task import update_task_progress, get_task
+            import time
+
+            start_time = time.time()
+            last_update = start_time
+
+            while True:
+                # Check cancellation
+                t = await get_task(context.task_id)
+                if t and t.status.value == "cancelled":
+                    await asyncio.to_thread(self._client.remove, [self._gid])
+                    return PluginResult(success=False, error="Task cancelled by user")
+
+                download = await asyncio.to_thread(self._client.get_download, self._gid)
+
+                if download.status == "complete":
+                    break
+                elif download.status == "error":
+                    return PluginResult(
+                        success=False,
+                        error=download.error_message or "Aria2 download error",
+                    )
+                elif download.status == "removed":
+                    return PluginResult(success=False, error="Task cancelled by user")
+
+                now = time.time()
+                if now - last_update > 1.0:
+                    speed = download.download_speed
+                    downloaded = download.completed_length
+                    total = download.total_length
+                    eta = (
+                        int((total - downloaded) / speed) if speed > 0 and total else 0
+                    )
+                    pct = (downloaded / total) * 100 if total else 0.0
+
+                    await update_task_progress(
+                        task_id=context.task_id,
+                        stage="Downloading",
+                        plugin=self.name,
+                        progress=pct,
+                        speed=speed,
+                        eta=eta,
+                        downloaded=downloaded,
+                        total=total,
+                    )
+                    last_update = now
+
+                await asyncio.sleep(1)
+
+            download = await asyncio.to_thread(self._client.get_download, self._gid)
 
             result = {
                 "gid": self._gid,

@@ -90,10 +90,75 @@ class QBitDownloader(DownloaderPlugin):
 
             await self._client.torrents.add(form.build())
 
-            tor_info = await self._client.torrents.info(tags=tags)
-            if tor_info:
-                tor_info = tor_info[0]
+            from core.task import update_task_progress, get_task
+            import time
+
+            start_time = time.time()
+            last_update = start_time
+
+            # Find the torrent hash
+            await asyncio.sleep(2)  # Give qbit time to register
+            torrents = await self._client.torrents.info(category=category)
+
+            # This is a bit naive, we should ideally track by tag or savepath
+            if torrents:
+                # Find the most recently added
+                tor_info = sorted(torrents, key=lambda x: x.added_on, reverse=True)[0]
                 self._torrent_hash = tor_info.hash
+            else:
+                return PluginResult(success=False, error="Failed to get torrent hash")
+
+            while True:
+                # Check cancellation
+                t = await get_task(context.task_id)
+                if t and t.status.value == "cancelled":
+                    await self._client.torrents.delete(
+                        hashes=[self._torrent_hash], delete_files=True
+                    )
+                    return PluginResult(success=False, error="Task cancelled by user")
+
+                torrents = await self._client.torrents.info(hashes=[self._torrent_hash])
+                if not torrents:
+                    return PluginResult(
+                        success=False, error="Torrent removed externally"
+                    )
+
+                tor_info = torrents[0]
+
+                if tor_info.state in ("uploading", "stalledUP", "pausedUP"):
+                    # Download complete, it's seeding or done
+                    break
+                elif tor_info.state in ("error", "missingFiles", "unknown"):
+                    return PluginResult(
+                        success=False,
+                        error=f"qBittorrent error state: {tor_info.state}",
+                    )
+
+                now = time.time()
+                if now - last_update > 1.0:
+                    speed = tor_info.dlspeed
+                    downloaded = tor_info.completed
+                    total = tor_info.total_size
+                    eta = tor_info.eta
+                    pct = (downloaded / total) * 100 if total else 0.0
+
+                    await update_task_progress(
+                        task_id=context.task_id,
+                        stage="Downloading",
+                        plugin=self.name,
+                        progress=pct,
+                        speed=speed,
+                        eta=eta,
+                        downloaded=downloaded,
+                        total=total,
+                    )
+                    last_update = now
+
+                await asyncio.sleep(1)
+
+            torrents = await self._client.torrents.info(hashes=[self._torrent_hash])
+            if torrents:
+                tor_info = torrents[0]
 
                 result = {
                     "hash": tor_info.hash,

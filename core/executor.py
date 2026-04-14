@@ -39,11 +39,11 @@ class Executor:
         self.registry = get_registry()
 
     async def execute(self, task: Task) -> bool:
-        task.start()
         logger.info(f"Starting task {task.id} with pipeline {task.config.pipeline_id}")
 
         pipeline = get_pipeline(task.config.pipeline_id)
 
+        previous_output = None
         for stage_index, stage in enumerate(pipeline.stages):
             task.current_stage = stage_index
 
@@ -55,7 +55,9 @@ class Executor:
             )
 
             try:
-                result = await self._execute_stage(task, stage_index, stage)
+                result = await self._execute_stage(
+                    task, stage_index, stage, previous_output
+                )
             except Exception as e:
                 logger.error(f"Stage {stage_index} failed: {e}")
                 task.fail(str(e))
@@ -75,6 +77,14 @@ class Executor:
                     task.fail(result.error or "Stage failed")
                     return False
 
+            # Carry over the output to the next stage
+            if (
+                result.output
+                and hasattr(result.output, "output_path")
+                and result.output.output_path
+            ):
+                previous_output = result.output.output_path
+
         task.complete()
         logger.info(f"Task {task.id} completed successfully")
         return True
@@ -84,6 +94,7 @@ class Executor:
         task: Task,
         stage_index: int,
         stage: PipelineStage,
+        previous_output: str = None,
     ) -> ExecutionResult:
         plugin_name = stage.plugin
         action = stage.action
@@ -96,10 +107,20 @@ class Executor:
                 error=f"Plugin {plugin_name} not found",
             )
 
+        from plugins.base import PluginContext
+
         context = ExecutionContext(
             task=task,
             stage_index=stage_index,
             stage=stage,
+        )
+
+        plugin_context = PluginContext(
+            task_id=task.id,
+            source=previous_output if previous_output else task.config.source,
+            destination=task.config.destination,
+            config=task.config.options,
+            metadata=task.config.metadata,
         )
 
         action_method = None
@@ -113,7 +134,7 @@ class Executor:
             )
 
         try:
-            result = await action_method(context, stage.config.__dict__)
+            result = await action_method(plugin_context, stage.config.__dict__)
 
             await update_task_progress(
                 task.id,

@@ -235,6 +235,7 @@ def list_pipelines() -> list[str]:
 
 
 def create_pipeline(
+    pipeline_id: str,
     name: str,
     stages: list[dict],
     description: str = "",
@@ -256,7 +257,7 @@ def create_pipeline(
 
     pipeline = Pipeline(
         config=PipelineConfig(
-            id=name.lower().replace(" ", "_"),
+            id=pipeline_id,
             name=name,
             description=description,
             stages=stage_objects,
@@ -277,6 +278,118 @@ def get_plugin_actions(plugin_name: str) -> list[str]:
 
 def _create_builtin_pipelines() -> None:
     templates = [
+        # Direct
+        (
+            "gdrive",
+            "Direct → GDrive",
+            [
+                {"plugin": "direct", "action": "download"},
+                {"plugin": "gdrive", "action": "upload"},
+            ],
+        ),
+        (
+            "telegram",
+            "Direct → Telegram",
+            [
+                {"plugin": "direct", "action": "download"},
+                {"plugin": "telegram", "action": "upload"},
+            ],
+        ),
+        # qBit
+        (
+            "qb_mirror",
+            "qBit → GDrive",
+            [
+                {"plugin": "qbit", "action": "download"},
+                {"plugin": "gdrive", "action": "upload"},
+            ],
+        ),
+        (
+            "qb_leech",
+            "qBit → Telegram",
+            [
+                {"plugin": "qbit", "action": "download"},
+                {"plugin": "telegram", "action": "upload"},
+            ],
+        ),
+        # JD
+        (
+            "jd_mirror",
+            "JD → GDrive",
+            [
+                {"plugin": "jd", "action": "download"},
+                {"plugin": "gdrive", "action": "upload"},
+            ],
+        ),
+        (
+            "jd_leech",
+            "JD → Telegram",
+            [
+                {"plugin": "jd", "action": "download"},
+                {"plugin": "telegram", "action": "upload"},
+            ],
+        ),
+        # NZB
+        (
+            "nzb_mirror",
+            "NZB → GDrive",
+            [
+                {"plugin": "nzb", "action": "download"},
+                {"plugin": "gdrive", "action": "upload"},
+            ],
+        ),
+        (
+            "nzb_leech",
+            "NZB → Telegram",
+            [
+                {"plugin": "nzb", "action": "download"},
+                {"plugin": "telegram", "action": "upload"},
+            ],
+        ),
+        # YT-DLP
+        (
+            "yt_gdrive",
+            "YT-DLP → GDrive",
+            [
+                {"plugin": "yt_dlp", "action": "download"},
+                {"plugin": "gdrive", "action": "upload"},
+            ],
+        ),
+        (
+            "yt_telegram",
+            "YT-DLP → Telegram",
+            [
+                {"plugin": "yt_dlp", "action": "download"},
+                {"plugin": "telegram", "action": "upload"},
+            ],
+        ),
+        # Mega
+        (
+            "mega_mirror",
+            "Mega → GDrive",
+            [
+                {"plugin": "mega", "action": "download"},
+                {"plugin": "gdrive", "action": "upload"},
+            ],
+        ),
+        (
+            "mega_leech",
+            "Mega → Telegram",
+            [
+                {"plugin": "mega", "action": "download"},
+                {"plugin": "telegram", "action": "upload"},
+            ],
+        ),
+        # Clone
+        (
+            "gdrive_clone",
+            "GDrive Clone",
+            [
+                {"plugin": "gdrive", "action": "download"},
+                {"plugin": "gdrive", "action": "upload"},
+            ],
+        ),
+        # Legacy mappings (keeping for compatibility if any code uses them)
         (
             "download_upload",
             "Download → Upload",
@@ -293,55 +406,11 @@ def _create_builtin_pipelines() -> None:
                 {"plugin": "gdrive", "action": "upload"},
             ],
         ),
-        (
-            "yt_telegram",
-            "YouTube → Telegram",
-            [
-                {"plugin": "yt_dlp", "action": "download"},
-                {"plugin": "telegram", "action": "upload"},
-            ],
-        ),
-        (
-            "download_extract_zip_upload",
-            "Download → Extract → Zip → Upload",
-            [
-                {"plugin": "direct", "action": "download"},
-                {"plugin": "extractor", "action": "extract"},
-                {"plugin": "compressor", "action": "zip"},
-                {"plugin": "gdrive", "action": "upload"},
-            ],
-        ),
-        (
-            "download_multi",
-            "Download → Multi-Upload",
-            [
-                {"plugin": "direct", "action": "download"},
-                {"plugin": "gdrive", "action": "upload"},
-                {"plugin": "telegram", "action": "upload"},
-            ],
-        ),
-        (
-            "yt_upload",
-            "YouTube → Extract → Upload",
-            [
-                {"plugin": "yt_dlp", "action": "download"},
-                {"plugin": "extractor", "action": "extract"},
-                {"plugin": "gdrive", "action": "upload"},
-            ],
-        ),
-        (
-            "mega_upload",
-            "Mega → Upload",
-            [
-                {"plugin": "mega", "action": "download"},
-                {"plugin": "gdrive", "action": "upload"},
-            ],
-        ),
     ]
 
     for pipeline_id, name, stages in templates:
         try:
-            create_pipeline(name, stages, custom=False)
+            create_pipeline(pipeline_id, name, stages, custom=False)
         except Exception as e:
             print(f"Error creating pipeline {pipeline_id}: {e}")
 

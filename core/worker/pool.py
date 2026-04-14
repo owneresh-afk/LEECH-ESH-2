@@ -89,6 +89,11 @@ class WorkerPool:
                     await asyncio.sleep(1)
                     continue
 
+                # Check task cancellation before executing
+                if task.status == TaskStatus.CANCELLED:
+                    await self._queue_manager.complete(task)
+                    continue
+
                 logger.info(f"Worker {worker.worker_id} executing task {task.id}")
                 self._stats.running_tasks += 1
                 self._stats.active_workers += 1

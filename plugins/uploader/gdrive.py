@@ -69,11 +69,10 @@ class GDriveUploader(UploaderPlugin):
                 file_path, resumable=True, chunksize=1 * 1024 * 1024
             )
 
-            file = (
-                service.files()
-                .create(body=metadata, media_body=media, fields="id,name,webViewLink")
-                .execute()
+            request = service.files().create(
+                body=metadata, media_body=media, fields="id,name,webViewLink"
             )
+            file = await asyncio.to_thread(request.execute)
 
             result = {
                 "id": file.get("id"),

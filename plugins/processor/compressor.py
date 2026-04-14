@@ -36,17 +36,46 @@ class CompressorProcessor(ProcessorPlugin):
 
         try:
             if not output_path:
-                if os.path.isdir(source):
-                    output_path = source + f".{method}"
-                else:
-                    output_path = source + f".{method}"
+                output_path = source + f".{method}"
+
+            from core.task import update_task_progress
+            import time
+
+            start_time = time.time()
+            last_update = start_time
+
+            async def progress_callback(current, total):
+                nonlocal last_update
+                now = time.time()
+                if now - last_update > 1.0:
+                    speed = current / (now - start_time) if now > start_time else 0
+                    eta = int((total - current) / speed) if speed > 0 and total else 0
+                    pct = (current / total) * 100 if total else 0.0
+
+                    await update_task_progress(
+                        task_id=context.task_id,
+                        stage="Compressing",
+                        plugin=self.name,
+                        progress=pct,
+                        speed=speed,
+                        eta=eta,
+                        downloaded=current,
+                        total=total,
+                    )
+                    last_update = now
 
             if method == "zip":
-                result = await self._compress_zip(source, output_path, level, password)
+                result = await asyncio.to_thread(
+                    self._compress_zip, source, output_path, level, password
+                )
             elif method == "tar":
-                result = await self._compress_tar(source, output_path)
+                result = await asyncio.to_thread(
+                    self._compress_tar, source, output_path
+                )
             elif method == "tar.gz" or method == "tgz":
-                result = await self._compress_targz(source, output_path)
+                result = await asyncio.to_thread(
+                    self._compress_targz, source, output_path
+                )
             else:
                 return PluginResult(success=False, error=f"Unknown format: {method}")
 
@@ -60,13 +89,14 @@ class CompressorProcessor(ProcessorPlugin):
             logger.error(f"Compression error: {e}")
             return PluginResult(success=False, error=str(e))
 
-    async def _compress_zip(
+    def _compress_zip(
         self, source: str, output: str, level: int, password: str = None
     ) -> dict:
         compression = zipfile.ZIP_DEFLATED
 
         with zipfile.ZipFile(output, "w", compression) as zf:
-            zf.compression_level = level
+            if hasattr(zf, "compression_level"):  # New in 3.7
+                zf.compression_level = level
 
             if os.path.isdir(source):
                 for root, dirs, files in os.walk(source):
@@ -82,7 +112,7 @@ class CompressorProcessor(ProcessorPlugin):
             "size": os.path.getsize(output),
         }
 
-    async def _compress_tar(self, source: str, output: str) -> dict:
+    def _compress_tar(self, source: str, output: str) -> dict:
         with tarfile.open(output, "w") as tf:
             if os.path.isdir(source):
                 for root, dirs, files in os.walk(source):
@@ -95,7 +125,7 @@ class CompressorProcessor(ProcessorPlugin):
 
         return {"format": "tar", "size": os.path.getsize(output)}
 
-    async def _compress_targz(self, source: str, output: str) -> dict:
+    def _compress_targz(self, source: str, output: str) -> dict:
         import gzip
 
         output_tar = output.replace(".tar.gz", ".tar").replace(".tgz", ".tar")
