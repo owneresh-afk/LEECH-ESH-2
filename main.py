@@ -6,15 +6,14 @@ Unified entry point that starts:
 - Database
 - Plugins
 - Workers
-- API Server
 - Telegram Bot
+- API Server
 """
 
 import asyncio
 import logging
 import signal
 import sys
-from contextlib import asynccontextmanager
 from typing import Optional
 
 logging.basicConfig(
@@ -33,8 +32,9 @@ class WZMLApp:
         self.api_server = None
         self.bot = None
         self._running = False
+        self._bot_username = None
 
-async def start(self):
+    async def start(self):
         logger.info("=" * 50)
         logger.info("WZML-X Starting...")
         logger.info("=" * 50)
@@ -64,8 +64,10 @@ async def start(self):
             logger.info("WZML-X Started Successfully!")
             logger.info("=" * 50)
 
-            bot_username = getattr(self, '_bot_username', None) or 'Telegram bot'
-            logger.info(f"API: http://{self.config.limits.API_HOST or 'localhost'}:{self.config.limits.API_PORT or 8080}")
+            bot_username = self._bot_username or "Telegram bot"
+            logger.info(
+                f"API: http://{self.config.limits.API_HOST or 'localhost'}:{self.config.limits.API_PORT or 8080}"
+            )
             logger.info(f"Bot: @{bot_username}")
 
             return True
