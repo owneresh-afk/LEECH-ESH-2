@@ -1,11 +1,14 @@
 """Settings handlers (user, bot)"""
 
 import logging
+import os
 from typing import Any
 
 from bots.clients.telegram.helpers.message_utils import arg_parser
 from bots.clients.telegram.helpers.button_utils import ButtonMaker
 from bots.clients.telegram.handlers import BotHandler, CommandContext
+
+SUDO_USERS = os.getenv("SUDO_USERS", "").split(",") if os.getenv("SUDO_USERS") else []
 
 logger = logging.getLogger("wzml.bot.handlers.settings")
 
@@ -87,8 +90,6 @@ class BotSettingsHandler(BotHandler):
             await client.send_message(context.chat_id, text, reply_markup)
 
         elif action == "sudo":
-            from config.telegram import SUDO_USERS
-
             sudo_list = ", ".join(str(s) for s in SUDO_USERS)
             text = f"Sudo Users:\n{sudo_list or 'None'}"
             await client.send_message(context.chat_id, text)

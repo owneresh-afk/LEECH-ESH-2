@@ -1,6 +1,7 @@
 """NZB search handler"""
 
 import logging
+import os
 from typing import Any, List
 
 import aiohttp
@@ -10,7 +11,9 @@ from bots.clients.telegram.helpers.message_utils import arg_parser
 from core.status_utils import get_readable_file_size
 from bots.clients.telegram.helpers.button_utils import ButtonMaker
 from bots.clients.telegram.handlers import BotHandler, CommandContext
-from config.telegram import HYDRA_IP, HYDRA_API_KEY
+
+HYDRA_IP = os.getenv("HYDRA_IP", "")
+HYDRA_API_KEY = os.getenv("HYDRA_API_KEY", "")
 
 logger = logging.getLogger("wzml.bot.handlers.nzb")
 
