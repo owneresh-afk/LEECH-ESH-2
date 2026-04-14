@@ -9,7 +9,7 @@ from typing import Any, Optional
 TELEGRAM_AVAILABLE = False
 
 try:
-    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    from pyrogram import InlineKeyboardButton, InlineKeyboardMarkup
 
     TELEGRAM_AVAILABLE = True
 except ImportError:

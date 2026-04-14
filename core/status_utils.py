@@ -373,6 +373,19 @@ def format_queue_stats(
 ┖ <i>Workers: {download_running + upload_running} active / {total}</i>"""
 
 
+def get_status_buttons(task_id: str) -> Any:
+    """Get status action buttons for a task"""
+    try:
+        from bots.clients.telegram.helpers.button_utils import ButtonMaker
+    except ImportError:
+        return None
+
+    buttons = ButtonMaker()
+    buttons.data_button("Cancel", f"cancel_{task_id}")
+    buttons.data_button("Delete", f"delete_{task_id}")
+    return buttons.build(inline=True)
+
+
 __all__ = [
     "MirrorStatus",
     "EngineStatus",
