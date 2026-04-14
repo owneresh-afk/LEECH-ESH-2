@@ -1,14 +1,24 @@
 """Settings handlers (user, bot)"""
 
 import logging
-import os
 from typing import Any
 
 from bots.clients.telegram.helpers.message_utils import arg_parser
 from bots.clients.telegram.helpers.button_utils import ButtonMaker
 from bots.clients.telegram.handlers import BotHandler, CommandContext
 
-SUDO_USERS = os.getenv("SUDO_USERS", "").split(",") if os.getenv("SUDO_USERS") else []
+SUDO_USERS = []
+
+
+def _load_sudo_users():
+    global SUDO_USERS
+    from config import get_config
+
+    cfg = get_config()
+    SUDO_USERS = cfg.telegram.SUDO_USERS or []
+
+
+_load_sudo_users()
 
 logger = logging.getLogger("wzml.bot.handlers.settings")
 
