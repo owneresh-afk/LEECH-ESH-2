@@ -36,6 +36,7 @@ log.txt
 
 # Credentials & Secrets
 config.py
+config.yml
 token.pickle
 credentials.json
 rclone.conf

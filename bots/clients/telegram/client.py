@@ -41,6 +41,10 @@ class TelegramClient(ClientAdapter):
 
         cfg = get_config()
 
+        logger.info(
+            f"DEBUG: API={cfg.telegram.API}, HASH={cfg.telegram.HASH[:10] if cfg.telegram.HASH else 'empty'}"
+        )
+
         self._bot = pyrogram.Client(
             name="wzml_bot",
             api_id=cfg.telegram.API,
