@@ -9,6 +9,7 @@ from plugins.base import DownloaderPlugin, PluginContext, PluginResult
 
 logger = logging.getLogger("wzml.mega_downloader")
 
+
 async def cmd_exec(cmd, shell=False):
     if shell:
         proc = await asyncio.create_subprocess_shell(
@@ -24,6 +25,7 @@ async def cmd_exec(cmd, shell=False):
         )
     stdout, stderr = await proc.communicate()
     return stdout.decode().strip(), stderr.decode().strip(), proc.returncode
+
 
 class MegaDownloader(DownloaderPlugin):
     name = "mega"
@@ -67,24 +69,30 @@ class MegaDownloader(DownloaderPlugin):
 
         try:
             from core.task import update_task_progress, get_task
-            
+
             if self._logged_in:
                 await cmd_exec(["mega-mkdir", temp_path])
                 stdout, stderr, ret = await cmd_exec(["mega-import", url, temp_path])
                 if ret != 0:
-                    return PluginResult(success=False, error=f"Mega import failed: {stderr}")
+                    return PluginResult(
+                        success=False, error=f"Mega import failed: {stderr}"
+                    )
 
                 # Get name
                 stdout, _, ret = await cmd_exec(["mega-ls", "-l", temp_path])
                 name = f"MEGA_Download_{self._gid}"
                 if stdout:
-                    lines = [line for line in stdout.strip().split("\n") if line.strip()]
+                    lines = [
+                        line for line in stdout.strip().split("\n") if line.strip()
+                    ]
                     for line in lines:
-                        match = re.search(r"\s(\d+|-)\s+\S+\s+\d{2}:\d{2}:\d{2}\s+(.*)$", line)
+                        match = re.search(
+                            r"\s(\d+|-)\s+\S+\s+\d{2}:\d{2}:\d{2}\s+(.*)$", line
+                        )
                         if match:
                             name = match.group(2).strip()
                             break
-                            
+
                 target_node = f"{temp_path}/{name}"
             else:
                 name = f"MEGA_Download_{self._gid}"
@@ -92,7 +100,9 @@ class MegaDownloader(DownloaderPlugin):
 
             os.makedirs(output_path, exist_ok=True)
             self._process = await asyncio.create_subprocess_exec(
-                "mega-get", target_node, output_path,
+                "mega-get",
+                target_node,
+                output_path,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
             )
@@ -113,26 +123,34 @@ class MegaDownloader(DownloaderPlugin):
                     return PluginResult(success=False, error="Task cancelled by user")
 
                 try:
-                    line_bytes = await asyncio.wait_for(self._process.stdout.readuntil(b"\r"), timeout=2.0)
+                    line_bytes = await asyncio.wait_for(
+                        self._process.stdout.readuntil(b"\r"), timeout=2.0
+                    )
                     line = line_bytes.decode().strip()
-                    
-                    multipliers = {"K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4, "B": 1}
+
+                    multipliers = {
+                        "K": 1024,
+                        "M": 1024**2,
+                        "G": 1024**3,
+                        "T": 1024**4,
+                        "B": 1,
+                    }
                     match = re.search(r"\(([\d\.]+)/([\d\.]+)\s([KMGT]?B)", line)
                     if match:
                         dl_val = float(match.group(1))
                         total_val = float(match.group(2))
                         unit_char = (match.group(3))[0].upper()
                         mult = multipliers.get(unit_char, 1)
-                        
+
                         downloaded = int(dl_val * mult)
                         total = int(total_val * mult)
-                        
+
                     now = time.time()
                     if now - last_update > 1.0 and total > 0:
                         speed = downloaded / (now - start_time)
                         eta = int((total - downloaded) / speed) if speed > 0 else 0
                         pct = (downloaded / total) * 100
-                        
+
                         await update_task_progress(
                             task_id=context.task_id,
                             stage="Downloading",
@@ -144,7 +162,7 @@ class MegaDownloader(DownloaderPlugin):
                             total=total,
                         )
                         last_update = now
-                        
+
                 except asyncio.TimeoutError:
                     if self._process.returncode is not None:
                         break
@@ -166,7 +184,10 @@ class MegaDownloader(DownloaderPlugin):
                     metadata={"name": name, "size": total},
                 )
             else:
-                return PluginResult(success=False, error=f"MegaCMD exited with {self._process.returncode}")
+                return PluginResult(
+                    success=False,
+                    error=f"MegaCMD exited with {self._process.returncode}",
+                )
 
         except Exception as e:
             logger.error(f"Mega download error: {e}")

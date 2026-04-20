@@ -42,9 +42,7 @@ class MediaInfoHandler(BotHandler):
                 "By reply/sending download link:\n"
                 "/mediainfo [link]"
             )
-            await send_message(
-            message,
-            help_msg)
+            await send_message(message, help_msg)
             return ""
 
         msg = await send_message(

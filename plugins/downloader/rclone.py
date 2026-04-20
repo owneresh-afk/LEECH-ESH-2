@@ -1,9 +1,8 @@
-import asyncio
+import json
 import logging
 import os
-import json
-from typing import Any, Optional
 
+from core.bin_config import BinConfig
 from plugins.base import DownloaderPlugin, PluginContext, PluginResult
 
 logger = logging.getLogger("wzml.rclone_downloader")
@@ -36,7 +35,7 @@ class RCloneDownloader(DownloaderPlugin):
             import subprocess
 
             cmd = [
-                "rclone",
+                BinConfig.RCLONE_NAME,
                 "copy",
                 f"{remote}:{source}",
                 dest,
@@ -71,7 +70,7 @@ class RCloneDownloader(DownloaderPlugin):
 
             remote = remote or self._remote
             cmd = [
-                "rclone",
+                BinConfig.RCLONE_NAME,
                 "lsjson",
                 f"{remote}:{path}",
                 "--config",
@@ -91,7 +90,7 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "listremotes", "--config", self._config_path]
+            cmd = [BinConfig.RCLONE_NAME, "listremotes", "--config", self._config_path]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode == 0:
@@ -105,7 +104,13 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "config", "show", "--config", self._config_path]
+            cmd = [
+                BinConfig.RCLONE_NAME,
+                "config",
+                "show",
+                "--config",
+                self._config_path,
+            ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             return {"output": result.stdout, "error": result.stderr}
@@ -117,7 +122,13 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "size", f"{remote}:{path}", "--config", self._config_path]
+            cmd = [
+                BinConfig.RCLONE_NAME,
+                "size",
+                f"{remote}:{path}",
+                "--config",
+                self._config_path,
+            ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode == 0:
@@ -137,7 +148,13 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "link", f"{remote}:{path}", "--config", self._config_path]
+            cmd = [
+                BinConfig.RCLONE_NAME,
+                "link",
+                f"{remote}:{path}",
+                "--config",
+                self._config_path,
+            ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode == 0:
@@ -151,7 +168,14 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "move", source, dest, "--config", self._config_path]
+            cmd = [
+                BinConfig.RCLONE_NAME,
+                "move",
+                source,
+                dest,
+                "--config",
+                self._config_path,
+            ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             return result.returncode == 0
@@ -163,7 +187,13 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "purge", f"{remote}:{path}", "--config", self._config_path]
+            cmd = [
+                BinConfig.RCLONE_NAME,
+                "purge",
+                f"{remote}:{path}",
+                "--config",
+                self._config_path,
+            ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             return result.returncode == 0
@@ -175,7 +205,13 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "mkdir", f"{remote}:{path}", "--config", self._config_path]
+            cmd = [
+                BinConfig.RCLONE_NAME,
+                "mkdir",
+                f"{remote}:{path}",
+                "--config",
+                self._config_path,
+            ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             return result.returncode == 0
@@ -190,7 +226,7 @@ class RCloneDownloader(DownloaderPlugin):
             import subprocess
 
             cmd = [
-                "rclone",
+                BinConfig.RCLONE_NAME,
                 "copy",
                 source,
                 f"{dest_remote}:{dest_path}",
@@ -211,7 +247,7 @@ class RCloneDownloader(DownloaderPlugin):
             import subprocess
 
             cmd = [
-                "rclone",
+                BinConfig.RCLONE_NAME,
                 "sync",
                 source,
                 f"{dest_remote}:{dest_path}",
@@ -229,7 +265,14 @@ class RCloneDownloader(DownloaderPlugin):
         try:
             import subprocess
 
-            cmd = ["rclone", "serve", "http", f"{remote}:", "--addr", address]
+            cmd = [
+                BinConfig.RCLONE_NAME,
+                "serve",
+                "http",
+                f"{remote}:",
+                "--addr",
+                address,
+            ]
             self._process = subprocess.Popen(cmd)
             return True
         except Exception as e:

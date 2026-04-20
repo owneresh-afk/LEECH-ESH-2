@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 from pyrogram import Client, types
 
+
 class BotHandler(ABC):
     """Base handler interface"""
 
@@ -17,7 +18,9 @@ class BotHandler(ABC):
         """Handle a command"""
         pass
 
-    async def can_handle(self, client: Client, message: types.Message, **kwargs) -> bool:
+    async def can_handle(
+        self, client: Client, message: types.Message, **kwargs
+    ) -> bool:
         """Check if this handler can handle the command"""
         return bool(message.text)
 

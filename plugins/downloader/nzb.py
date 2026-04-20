@@ -24,7 +24,7 @@ class NZBDownloader(DownloaderPlugin):
     ) -> bool:
         try:
             from sabnzbdapi import SabnzbdClient
-            
+
             self._client = SabnzbdClient(host, api_key, port)
             self._host = host
             self._port = port
@@ -46,7 +46,7 @@ class NZBDownloader(DownloaderPlugin):
 
         try:
             from core.task import update_task_progress, get_task
-            
+
             category_name = f"wzml_{context.task_id}"
             await self._client.create_category(category_name, output_path)
 
@@ -54,20 +54,14 @@ class NZBDownloader(DownloaderPlugin):
             add_url = url if not nzbpath else None
 
             res = await self._client.add_uri(
-                add_url,
-                nzbpath,
-                nzb_name,
-                "",
-                category_name,
-                priority=0,
-                pp=3
+                add_url, nzbpath, nzb_name, "", category_name, priority=0, pp=3
             )
 
             if not res or not res.get("status"):
                 return PluginResult(success=False, error="Failed to add NZB")
 
             job_id = res["nzo_ids"][0]
-            
+
             start_time = time.time()
             last_update = start_time
 
@@ -79,7 +73,7 @@ class NZBDownloader(DownloaderPlugin):
                     return PluginResult(success=False, error="Task cancelled by user")
 
                 downloads = await self._client.get_downloads(nzo_ids=job_id)
-                
+
                 if not downloads or not downloads.get("queue", {}).get("slots"):
                     # Check history if it's completed or failed
                     history = await self._client.get_history(nzo_ids=job_id)
@@ -90,19 +84,23 @@ class NZBDownloader(DownloaderPlugin):
                             return PluginResult(
                                 success=True,
                                 output_path=os.path.join(output_path, name),
-                                metadata={"job_id": job_id, "name": name, "category": category_name},
+                                metadata={
+                                    "job_id": job_id,
+                                    "name": name,
+                                    "category": category_name,
+                                },
                             )
                         elif slot.get("status") == "Failed":
                             err = slot.get("fail_message", "Unknown error")
                             return PluginResult(success=False, error=err)
-                    
+
                     # If not in queue and not in history, something is wrong, but wait
                     await asyncio.sleep(1)
                     continue
 
                 slot = downloads["queue"]["slots"][0]
                 status = slot.get("status")
-                
+
                 if status == "Paused":
                     # It might be paused waiting for user input, or we can just resume it
                     pass
@@ -110,7 +108,9 @@ class NZBDownloader(DownloaderPlugin):
                 now = time.time()
                 if now - last_update > 1.0:
                     speed = float(downloads["queue"].get("kbpersec", 0)) * 1024
-                    downloaded = float(slot.get("mb", 0) - slot.get("mbleft", 0)) * 1024 * 1024
+                    downloaded = (
+                        float(slot.get("mb", 0) - slot.get("mbleft", 0)) * 1024 * 1024
+                    )
                     total = float(slot.get("mb", 0)) * 1024 * 1024
                     eta = int((total - downloaded) / speed) if speed > 0 else 0
                     pct = float(slot.get("percentage", 0))
@@ -166,4 +166,3 @@ class NZBDownloader(DownloaderPlugin):
         except Exception as e:
             logger.error(f"Sabnzbd cancel error: {e}")
             return False
-

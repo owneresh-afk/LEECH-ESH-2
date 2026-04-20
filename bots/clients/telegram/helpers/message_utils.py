@@ -25,14 +25,24 @@ logger = logging.getLogger("wzml.telegram.helpers")
 
 _telegram_client = None
 
+
 def set_telegram_client(client) -> None:
     global _telegram_client
     _telegram_client = client
 
+
 def get_telegram_client():
     return _telegram_client
 
-async def send_message(message: Union[types.Message, int], text: str, buttons=None, block=True, photo=None, **kwargs) -> Any:
+
+async def send_message(
+    message: Union[types.Message, int],
+    text: str,
+    buttons=None,
+    block=True,
+    photo=None,
+    **kwargs,
+) -> Any:
     """Send message with robust error handling and rate limit management"""
     try:
         if photo:
@@ -83,7 +93,7 @@ async def send_message(message: Union[types.Message, int], text: str, buttons=No
                 disable_web_page_preview=True,
                 disable_notification=True,
                 reply_markup=buttons,
-                **kwargs
+                **kwargs,
             )
         return await message.reply(
             text=text,
@@ -103,12 +113,21 @@ async def send_message(message: Union[types.Message, int], text: str, buttons=No
         logger.warning(str(rmi))
         return await send_message(message, text, None)
     except (MessageEmpty, EntityBoundsInvalid):
-        return await send_message(message, text, buttons, block, photo, parse_mode=ParseMode.DISABLED)
+        return await send_message(
+            message, text, buttons, block, photo, parse_mode=ParseMode.DISABLED
+        )
     except Exception as e:
         logger.error(str(e), exc_info=True)
         return str(e)
 
-async def edit_message(message: Union[types.Message, int], text: str, buttons=None, message_id: int = None, **kwargs) -> Any:
+
+async def edit_message(
+    message: Union[types.Message, int],
+    text: str,
+    buttons=None,
+    message_id: int = None,
+    **kwargs,
+) -> Any:
     """Edit message with robust error handling"""
     try:
         if isinstance(message, int) and message_id:
@@ -118,14 +137,11 @@ async def edit_message(message: Union[types.Message, int], text: str, buttons=No
                 text=text,
                 reply_markup=buttons,
                 disable_web_page_preview=True,
-                **kwargs
+                **kwargs,
             )
         elif isinstance(message, types.Message):
             return await message.edit(
-                text=text,
-                reply_markup=buttons,
-                disable_web_page_preview=True,
-                **kwargs
+                text=text, reply_markup=buttons, disable_web_page_preview=True, **kwargs
             )
     except FloodWait as f:
         logger.warning(str(f))
@@ -138,22 +154,31 @@ async def edit_message(message: Union[types.Message, int], text: str, buttons=No
             logger.error(str(e), exc_info=True)
         return str(e)
 
-async def delete_message(message: Union[types.Message, int], message_id: int = None) -> bool:
+
+async def delete_message(
+    message: Union[types.Message, int], message_id: int = None
+) -> bool:
     try:
         if isinstance(message, types.Message):
             await message.delete()
             return True
         elif isinstance(message, int) and message_id:
-            await _telegram_client.delete_messages(chat_id=message, message_ids=message_id)
+            await _telegram_client.delete_messages(
+                chat_id=message, message_ids=message_id
+            )
             return True
     except Exception as e:
         logger.error(f"Delete message error: {e}")
     return False
 
-async def auto_delete_message(message: Union[types.Message, int], message_id: int = None, delay: int = 300) -> asyncio.Task:
+
+async def auto_delete_message(
+    message: Union[types.Message, int], message_id: int = None, delay: int = 300
+) -> asyncio.Task:
     async def _delete():
         await asyncio.sleep(delay)
         await delete_message(message, message_id)
+
     return asyncio.create_task(_delete())
 
 
@@ -164,7 +189,7 @@ async def send_media(
     caption: str = "",
     reply_markup: Any = None,
     progress: Any = None,
-    **kwargs
+    **kwargs,
 ) -> Any:
     if not _telegram_client:
         logger.warning("Telegram client not configured")
@@ -173,51 +198,101 @@ async def send_media(
     try:
         if media_type == "photo":
             return await _telegram_client.send_photo(
-                chat_id=chat_id, photo=file_path, caption=caption, reply_markup=reply_markup, progress=progress, **kwargs
+                chat_id=chat_id,
+                photo=file_path,
+                caption=caption,
+                reply_markup=reply_markup,
+                progress=progress,
+                **kwargs,
             )
         elif media_type == "video":
             return await _telegram_client.send_video(
-                chat_id=chat_id, video=file_path, caption=caption, reply_markup=reply_markup, progress=progress, **kwargs
+                chat_id=chat_id,
+                video=file_path,
+                caption=caption,
+                reply_markup=reply_markup,
+                progress=progress,
+                **kwargs,
             )
         elif media_type == "document":
             return await _telegram_client.send_document(
-                chat_id=chat_id, document=file_path, caption=caption, reply_markup=reply_markup, progress=progress, **kwargs
+                chat_id=chat_id,
+                document=file_path,
+                caption=caption,
+                reply_markup=reply_markup,
+                progress=progress,
+                **kwargs,
             )
         elif media_type == "audio":
             return await _telegram_client.send_audio(
-                chat_id=chat_id, audio=file_path, caption=caption, reply_markup=reply_markup, progress=progress, **kwargs
+                chat_id=chat_id,
+                audio=file_path,
+                caption=caption,
+                reply_markup=reply_markup,
+                progress=progress,
+                **kwargs,
             )
     except FloodWait as f:
         logger.warning(f"FloodWait encountered during send_media: {f}")
         await asyncio.sleep(f.value * 1.2)
-        return await send_media(chat_id, media_type, file_path, caption, reply_markup, progress, **kwargs)
+        return await send_media(
+            chat_id, media_type, file_path, caption, reply_markup, progress, **kwargs
+        )
     except Exception as e:
         logger.error(f"Send media error [{media_type}]: {e}", exc_info=True)
     return None
 
 
 async def send_photo(
-    chat_id: int, photo: str, caption: str = "", reply_markup: Any = None, progress: Any = None, **kwargs
+    chat_id: int,
+    photo: str,
+    caption: str = "",
+    reply_markup: Any = None,
+    progress: Any = None,
+    **kwargs,
 ) -> Any:
-    return await send_media(chat_id, "photo", photo, caption, reply_markup, progress, **kwargs)
+    return await send_media(
+        chat_id, "photo", photo, caption, reply_markup, progress, **kwargs
+    )
 
 
 async def send_video(
-    chat_id: int, video: str, caption: str = "", reply_markup: Any = None, progress: Any = None, **kwargs
+    chat_id: int,
+    video: str,
+    caption: str = "",
+    reply_markup: Any = None,
+    progress: Any = None,
+    **kwargs,
 ) -> Any:
-    return await send_media(chat_id, "video", video, caption, reply_markup, progress, **kwargs)
+    return await send_media(
+        chat_id, "video", video, caption, reply_markup, progress, **kwargs
+    )
 
 
 async def send_document(
-    chat_id: int, document: str, caption: str = "", reply_markup: Any = None, progress: Any = None, **kwargs
+    chat_id: int,
+    document: str,
+    caption: str = "",
+    reply_markup: Any = None,
+    progress: Any = None,
+    **kwargs,
 ) -> Any:
-    return await send_media(chat_id, "document", document, caption, reply_markup, progress, **kwargs)
+    return await send_media(
+        chat_id, "document", document, caption, reply_markup, progress, **kwargs
+    )
 
 
 async def send_audio(
-    chat_id: int, audio: str, caption: str = "", reply_markup: Any = None, progress: Any = None, **kwargs
+    chat_id: int,
+    audio: str,
+    caption: str = "",
+    reply_markup: Any = None,
+    progress: Any = None,
+    **kwargs,
 ) -> Any:
-    return await send_media(chat_id, "audio", audio, caption, reply_markup, progress, **kwargs)
+    return await send_media(
+        chat_id, "audio", audio, caption, reply_markup, progress, **kwargs
+    )
 
 
 def get_readable_time(seconds: int) -> str:

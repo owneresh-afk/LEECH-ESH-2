@@ -700,7 +700,7 @@ def pixeldrain(url):
         return response.url + code
     except Exception as e:
         raise DirectDownloadLinkException("ERROR: Direct link not found")
-        
+
 
 def streamtape(url):
     splitted_url = url.split("/")
@@ -1214,7 +1214,7 @@ def gofile(url):
                     return gofile_token_cache
             except Exception:
                 pass  # Token invalid, will create new one
-        
+
         # Create new account if no valid cached token
         __url = "https://api.gofile.io/accounts"
         try:
@@ -1238,7 +1238,7 @@ def gofile(url):
             "Connection": "keep-alive",
             "Authorization": "Bearer" + " " + token,
             "X-Website-Token": wt,
-            "X-BL": "en-US"
+            "X-BL": "en-US",
         }
         if _password:
             _url += f"&password={_password}"
@@ -1246,9 +1246,13 @@ def gofile(url):
             _json = session.get(_url, headers=headers).json()
         except Exception as e:
             raise DirectDownloadLinkException(f"ERROR: {e.__class__.__name__}")
-        
+
         # Handle token/auth errors - clear cache and retry once
-        if _json.get("status") in ["error-unauth", "error-forbidden", "error-tokenInvalid"]:
+        if _json.get("status") in [
+            "error-unauth",
+            "error-forbidden",
+            "error-tokenInvalid",
+        ]:
             global gofile_token_cache
             gofile_token_cache = None  # Clear invalid token
             if retry:
@@ -1262,10 +1266,12 @@ def gofile(url):
                     nonlocal details
                     details["header"] = f"Cookie: accountToken={new_token}"
                 except Exception:
-                    raise DirectDownloadLinkException("ERROR: GoFile token revoked and failed to create new token.")
+                    raise DirectDownloadLinkException(
+                        "ERROR: GoFile token revoked and failed to create new token."
+                    )
             else:
                 raise DirectDownloadLinkException("ERROR: GoFile token revoked.")
-        
+
         if _json["status"] in "error-passwordRequired":
             raise DirectDownloadLinkException(
                 f"ERROR:\n{PASSWORD_ERROR_MESSAGE.format(url)}"

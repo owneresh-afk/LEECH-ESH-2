@@ -30,8 +30,8 @@ class GDriveCountHandler(BotHandler):
 
         if not is_gdrive_link(link):
             await send_message(
-            message,
-            "Send Gdrive link along with command or by replying to the link by command",
+                message,
+                "Send Gdrive link along with command or by replying to the link by command",
             )
             return {}
 
@@ -102,14 +102,12 @@ class GDriveDeleteHandler(BotHandler):
 
         if not is_gdrive_link(link):
             await send_message(
-            message,
-            "Send Gdrive link along with command or by replying to the link by command",
+                message,
+                "Send Gdrive link along with command or by replying to the link by command",
             )
             return False
 
-        msg = await send_message(
-            message,
-            "Deleting...")
+        msg = await send_message(message, "Deleting...")
 
         try:
             gdrive = get_plugin("gdrive")
@@ -165,8 +163,8 @@ class GDriveListHandler(BotHandler):
 
         if not query:
             await send_message(
-            message,
-            "Send a search query along with list command",
+                message,
+                "Send a search query along with list command",
             )
             return []
 

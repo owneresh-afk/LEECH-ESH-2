@@ -25,8 +25,8 @@ class SearchHandler(BotHandler):
 
         if not query:
             await send_message(
-            message,
-            "Send Name along with /search Command!",
+                message,
+                "Send Name along with /search Command!",
             )
             return []
 
@@ -45,9 +45,7 @@ class SearchHandler(BotHandler):
         self._search_results = results
 
         if not results:
-            await send_message(
-            message,
-            "No Results Found!")
+            await send_message(message, "No Results Found!")
             return []
 
         result_text = f"Search Results for: {query}\n\n"
@@ -64,9 +62,7 @@ class SearchHandler(BotHandler):
             buttons.data_button(f"{i}", f"select {i}")
         reply_markup = buttons.build_menu(2)
 
-        await send_message(
-            message,
-            result_text, reply_markup)
+        await send_message(message, result_text, reply_markup)
 
         return results
 

@@ -67,10 +67,7 @@ class RSSHandler(BotHandler):
             else:
                 feed_text = "No RSS Feeds Added!\n\nUse /rss add <feed_url>"
 
-            await send_message(
-                message,
-                feed_text
-            )
+            await send_message(message, feed_text)
             return feeds
 
         elif action == "remove" or action == "rm":
@@ -82,10 +79,7 @@ class RSSHandler(BotHandler):
                     f"Removed: {feed_url}",
                 )
             else:
-                await send_message(
-                    message,
-                    "Feed not found!"
-                )
+                await send_message(message, "Feed not found!")
             return feeds
 
         elif action == "refresh":

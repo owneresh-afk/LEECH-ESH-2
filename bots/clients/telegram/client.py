@@ -21,8 +21,10 @@ logger = logging.getLogger("wzml.telegram.client")
 
 _status_handler_instance = None
 
+
 def get_status_handler():
     return _status_handler_instance
+
 
 class TelegramClient(ClientAdapter):
     """Telegram client adapter using split handlers"""
@@ -77,8 +79,9 @@ class TelegramClient(ClientAdapter):
 
         self._running = True
         logger.info(f"Telegram client initialized with {len(self._handlers)} handlers")
-        
+
         import asyncio
+
         self._ws_task = asyncio.create_task(self.listen_to_ws())
 
         return True
@@ -86,7 +89,7 @@ class TelegramClient(ClientAdapter):
     async def listen_to_ws(self):
         cfg = get_config()
         host = cfg.limits.API_HOST if cfg.limits.API_HOST != "0.0.0.0" else "127.0.0.1"
-        uri = f"ws://{host}:{cfg.limits.API_PORT}/api/status/ws"
+        uri = f"ws://{host}:{cfg.limits.API_PORT}/status/ws"
         while self._running:
             try:
                 async with websockets.connect(uri) as ws:
@@ -96,11 +99,12 @@ class TelegramClient(ClientAdapter):
                         await self._dispatch_ws_event(event)
             except Exception as e:
                 logger.error(f"WS disconnected: {e}")
-                await asyncio.sleep(3) # reconnect backoff
+                await asyncio.sleep(3)  # reconnect backoff
 
     async def _dispatch_ws_event(self, event):
         # Update matching status messages directly from RAM/cache mapping
         from bots.clients.telegram.client import get_status_handler
+
         status_handler = get_status_handler()
         if status_handler:
             await status_handler.handle_ws_event(self._bot, event)
@@ -156,10 +160,10 @@ class TelegramClient(ClientAdapter):
         cancel = CancelHandler()
         cancel_all = CancelAllHandler()
         status = StatusHandler()
-        
+
         global _status_handler_instance
         _status_handler_instance = status
-        
+
         search = SearchHandler()
         rss = RSSHandler()
         gdrive_count = GDriveCountHandler()
@@ -235,7 +239,7 @@ class TelegramClient(ClientAdapter):
             from bots.clients.telegram.helpers.filters import CustomFilters
 
             user_id = message.from_user.id if message.from_user else 0
-            
+
             if not await CustomFilters.is_authorized(user_id):
                 logger.warning(f"Unauthorized user {user_id}")
                 await message.reply("Unauthorized")

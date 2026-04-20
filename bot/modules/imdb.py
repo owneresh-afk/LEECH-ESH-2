@@ -60,7 +60,7 @@ async def imdb_search(_, message):
             movieid = result.group(1)
             if movie := await sync_to_async(get_movie, movieid):
                 buttons.data_button(
-                    f"🎬 {movie.title} ({getattr(movie , 'year' , 'N/A')})",
+                    f"🎬 {movie.title} ({getattr(movie, 'year', 'N/A')})",
                     f"imdb {user_id} movie {movieid}",
                 )
             else:
@@ -73,7 +73,7 @@ async def imdb_search(_, message):
                 )
             for movie in movies:
                 buttons.data_button(
-                    f"🎬 {movie.title} ({getattr(movie , 'year' , 'N/A')})",
+                    f"🎬 {movie.title} ({getattr(movie, 'year', 'N/A')})",
                     f"imdb {user_id} movie {movie.id}",
                 )
         buttons.data_button("🚫 Close 🚫", f"imdb {user_id} close")

@@ -55,10 +55,12 @@ CLONE_USAGE = """<b>Clone Usage</b>
 /clone <gdrive_link> - Clone Google Drive folder
 """
 
+
 @dataclass
 class MirrorResult:
     task: Optional[Any] = None
     message: str = ""
+
 
 class MirrorHandler(BotHandler):
     """Handler for mirror, leech, qb, jd, nzb commands"""
@@ -86,11 +88,11 @@ class MirrorHandler(BotHandler):
             "chat_id": message.chat.id,
             "user_id": message.from_user.id,
             "ui_data": {
-                "mention": message.from_user.mention(style='html'),
+                "mention": message.from_user.mention(style="html"),
                 "user_id": message.from_user.id,
                 "message_link": message.link,
-                "out_mode": "document" if args.get("-doc") else "media"
-            }
+                "out_mode": "document" if args.get("-doc") else "media",
+            },
         }
 
         result = await api_client.create_mirror(
@@ -99,11 +101,15 @@ class MirrorHandler(BotHandler):
             destination=args.get("d", ""),
             is_leech=is_leech,
             is_qbit=is_qbit,
-            metadata=metadata
+            metadata=metadata,
         )
 
         if "error" in result:
-            await send_message(message, f"<b>Error:</b> {result['error']}", parse_mode=enums.ParseMode.HTML)
+            await send_message(
+                message,
+                f"<b>Error:</b> {result['error']}",
+                parse_mode=enums.ParseMode.HTML,
+            )
             return MirrorResult()
 
         task_data = result.get("data", {})
@@ -141,13 +147,15 @@ class YtdlpHandler(BotHandler):
         quality = args.get("q", "bestvideo+bestaudio/best")
 
         result = await api_client.create_ytdlp(
-            url=link,
-            user_id=message.from_user.id,
-            quality=quality
+            url=link, user_id=message.from_user.id, quality=quality
         )
 
         if "error" in result:
-            await send_message(message, f"<b>Error:</b> {result['error']}", parse_mode=enums.ParseMode.HTML)
+            await send_message(
+                message,
+                f"<b>Error:</b> {result['error']}",
+                parse_mode=enums.ParseMode.HTML,
+            )
             return MirrorResult()
 
         task_data = result.get("data", {})
@@ -194,7 +202,11 @@ class CloneHandler(BotHandler):
         )
 
         if "error" in result:
-            await send_message(message, f"<b>Error:</b> {result['error']}", parse_mode=enums.ParseMode.HTML)
+            await send_message(
+                message,
+                f"<b>Error:</b> {result['error']}",
+                parse_mode=enums.ParseMode.HTML,
+            )
             return MirrorResult()
 
         task_data = result.get("data", {})
@@ -239,7 +251,7 @@ class CancelHandler(BotHandler):
                         parse_mode=enums.ParseMode.HTML,
                     )
                     return task
-                
+
                 # fallback: get user tasks
                 result = await api_client.get_user_tasks(user_id, limit=1)
                 tasks = result.get("data", [])

@@ -111,21 +111,21 @@ class WZMLApp:
             sabnzbd_name = BinConfig.SABNZBD_NAME
 
             logger.info("Starting background daemons (qBittorrent, Aria2, SABnzbd)...")
-            
+
             cwd = os.getcwd()
             srun([qbit_name, "-d", f"--profile={cwd}"], check=False)
             logger.info("[OK] qBittorrent daemon started")
-            
+
             if not os.path.exists(".netrc"):
                 with open(".netrc", "w") as f:
                     pass
-            
+
             proc = await asyncio.create_subprocess_shell(
                 f"chmod 600 .netrc && cp .netrc /root/.netrc && chmod +x setpkgs.sh && ./setpkgs.sh {aria2_name} {sabnzbd_name}"
             )
             await proc.wait()
             logger.info("[OK] Aria2 and Sabnzbd daemons started via setpkgs.sh")
-            
+
         except Exception as e:
             logger.error(f"Failed to start daemons: {e}")
 

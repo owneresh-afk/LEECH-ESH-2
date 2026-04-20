@@ -7,7 +7,11 @@ from bots.clients.telegram.helpers.message_utils import arg_parser
 from bots.clients.telegram.helpers.button_utils import ButtonMaker
 from pyrogram import Client, types
 from bots.clients.telegram.handlers import BotHandler
-from bots.clients.telegram.helpers.message_utils import send_message, delete_message, delete_message
+from bots.clients.telegram.helpers.message_utils import (
+    send_message,
+    delete_message,
+    delete_message,
+)
 
 SUDO_USERS = []
 
@@ -35,15 +39,11 @@ class UserSettingsHandler(BotHandler):
     ) -> str:
         from bots.clients.telegram.helpers.settings_menu import get_user_settings
         import pyrogram
-        
+
         msg_text, buttons = await get_user_settings(message.from_user, "main")
-        
-        await send_message(
-            message,
-            msg_text,
-            buttons
-        )
-        
+
+        await send_message(message, msg_text, buttons)
+
         return "menu"
 
 
@@ -72,22 +72,16 @@ class BotSettingsHandler(BotHandler):
             buttons.data_button("5", "bset buttons")
             reply_markup = buttons.build_menu(2)
 
-            await send_message(
-            message,
-            text, reply_markup)
+            await send_message(message, text, reply_markup)
 
         elif action == "sudo":
             sudo_list = ", ".join(str(s) for s in SUDO_USERS)
             text = f"Sudo Users:\n{sudo_list or 'None'}"
-            await send_message(
-            message,
-            text)
+            await send_message(message, text)
 
         else:
             text = "Use /bsetting menu"
-            await send_message(
-            message,
-            text)
+            await send_message(message, text)
 
         return text
 
@@ -114,27 +108,19 @@ class ServicesHandler(BotHandler):
             buttons.data_button("Restart All", "service restart")
             reply_markup = buttons.build_menu(1)
 
-            await send_message(
-            message,
-            text, reply_markup)
+            await send_message(message, text, reply_markup)
 
         elif action == "start":
             text = "Starting services..."
-            await send_message(
-            message,
-            text)
+            await send_message(message, text)
 
         elif action == "stop":
             text = "Stopping services..."
-            await send_message(
-            message,
-            text)
+            await send_message(message, text)
 
         elif action == "restart":
             text = "Restarting services..."
-            await send_message(
-            message,
-            text)
+            await send_message(message, text)
 
         return text
 
@@ -152,8 +138,8 @@ class IMDBHandler(BotHandler):
 
         if not query:
             await send_message(
-            message,
-            "Send Movie Name along with /imdb Command!\n\n/imdb Inception",
+                message,
+                "Send Movie Name along with /imdb Command!\n\n/imdb Inception",
             )
             return {}
 
@@ -183,21 +169,17 @@ class IMDBHandler(BotHandler):
                         text,
                     )
                 else:
-                    await send_message(
-            message,
-            text)
+                    await send_message(message, text)
 
                 return result
             else:
-                await send_message(
-            message,
-            "No results found!")
+                await send_message(message, "No results found!")
 
         except Exception as e:
             logger.error(f"IMDB error: {e}")
             await send_message(
-            message,
-            f"Error: {str(e)}",
+                message,
+                f"Error: {str(e)}",
             )
 
         return {}
@@ -256,9 +238,7 @@ class HelpHandler(BotHandler):
             text += "/ping - Ping bot\n"
             text += "/help - Help menu"
 
-        await send_message(
-            message,
-            text)
+        await send_message(message, text)
         return text
 
 

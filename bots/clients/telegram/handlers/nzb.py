@@ -45,8 +45,8 @@ class NZBSearchHandler(BotHandler):
 
         if not query:
             await send_message(
-            message,
-            "Send Search Query!\n\n/nzbsearch movie name",
+                message,
+                "Send Search Query!\n\n/nzbsearch movie name",
             )
             return []
 

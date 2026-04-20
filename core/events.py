@@ -3,6 +3,7 @@ import logging
 
 logger = logging.getLogger("wzml.core.events")
 
+
 class EventBus:
     def __init__(self):
         self.subscribers = []
@@ -14,7 +15,9 @@ class EventBus:
     def unsubscribe(self, queue: asyncio.Queue):
         if queue in self.subscribers:
             self.subscribers.remove(queue)
-            logger.debug(f"EventBus: Subscriber removed. Total: {len(self.subscribers)}")
+            logger.debug(
+                f"EventBus: Subscriber removed. Total: {len(self.subscribers)}"
+            )
 
     async def publish(self, event_type: str, data: dict):
         for queue in self.subscribers:
@@ -22,5 +25,6 @@ class EventBus:
                 await queue.put({"type": event_type, "data": data})
             except Exception as e:
                 logger.error(f"EventBus: Failed to publish to a subscriber: {e}")
+
 
 event_bus = EventBus()

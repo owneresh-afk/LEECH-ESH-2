@@ -5,7 +5,6 @@ import zipfile
 import tarfile
 import time
 import re
-from typing import Any, Optional
 
 from plugins.base import ProcessorPlugin, PluginContext, PluginResult
 

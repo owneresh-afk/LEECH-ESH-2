@@ -45,7 +45,7 @@ async def wait_for_api(url: str) -> bool:
             logger.info("API is now available!")
             return True
 
-        logger.info(f"Retry {i+1}/{MAX_RETRIES} in {RETRY_INTERVAL}s...")
+        logger.info(f"Retry {i + 1}/{MAX_RETRIES} in {RETRY_INTERVAL}s...")
         await asyncio.sleep(RETRY_INTERVAL)
 
     logger.error("API did not become available!")
@@ -64,7 +64,7 @@ async def start_health_check():
         config.load_all()
 
         base_url = config.telegram.BASE_URL or os.environ.get("BASE_URL", "")
-        
+
         if not base_url:
             base_url = f"http://localhost:{config.limits.API_PORT or 8080}"
     except Exception as e:

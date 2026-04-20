@@ -19,12 +19,14 @@ class TelegramDownloader(DownloaderPlugin):
     async def initialize(self) -> bool:
         try:
             from bots.clients.telegram.client import get_telegram_client
-            
+
             tg_client = await get_telegram_client()
             if tg_client and tg_client._bot:
                 self._client = tg_client
                 self._bot = tg_client._bot
-                logger.info("Telegram downloader initialized with global Pyrogram client")
+                logger.info(
+                    "Telegram downloader initialized with global Pyrogram client"
+                )
                 return True
             else:
                 logger.warning("Failed to fetch global Pyrogram client")
@@ -42,14 +44,14 @@ class TelegramDownloader(DownloaderPlugin):
         try:
             from core.task import update_task_progress, get_task
             import time
-            
+
             start_time = time.time()
             last_update = start_time
 
             async def progress(current, total):
                 nonlocal last_update
                 now = time.time()
-                
+
                 # Check cancellation
                 t = await get_task(context.task_id)
                 if t and t.status.value == "cancelled":
@@ -59,7 +61,7 @@ class TelegramDownloader(DownloaderPlugin):
                     speed = current / (now - start_time)
                     eta = int((total - current) / speed) if speed > 0 else 0
                     pct = (current / total) * 100
-                    
+
                     await update_task_progress(
                         task_id=context.task_id,
                         stage="Downloading",
@@ -73,12 +75,10 @@ class TelegramDownloader(DownloaderPlugin):
                     last_update = now
 
             os.makedirs(output_path, exist_ok=True)
-            
+
             # Since source could be a file_id string:
             file_path = await self._bot.download_media(
-                message=file_id,
-                file_name=output_path + "/",
-                progress=progress
+                message=file_id, file_name=output_path + "/", progress=progress
             )
 
             if not file_path:
@@ -109,4 +109,3 @@ class TelegramDownloader(DownloaderPlugin):
             self._bot.stop_transmission()
             return True
         return False
-

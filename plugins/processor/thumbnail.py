@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import os
-from typing import Any, Optional
 
+from core.bin_config import BinConfig
 from plugins.base import ProcessorPlugin, PluginContext, PluginResult
 
 logger = logging.getLogger("wzml.thumbnail_processor")
@@ -46,7 +46,7 @@ class ThumbnailProcessor(ProcessorPlugin):
         self, source: str, output: str, time: str, width: int, height: int
     ) -> dict:
         cmd = [
-            "ffmpeg",
+            BinConfig.FFMPEG_NAME,
             "-y",
             "-ss",
             time,

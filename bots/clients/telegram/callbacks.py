@@ -1,12 +1,15 @@
 import logging
 import re
-from typing import Any, Callable, Dict, Optional
-
-from bots.clients.telegram.helpers.settings_menu import get_user_settings, check_user_input
-from bots.clients.telegram.helpers.message_utils import edit_message, delete_message
+from typing import Callable, Dict
 
 import pyrogram
-from pyrogram import Client, types
+from pyrogram import Client, filters, types
+
+from bots.clients.telegram.helpers.message_utils import delete_message, edit_message
+from bots.clients.telegram.helpers.settings_menu import (
+    check_user_input,
+    get_user_settings,
+)
 
 logger = logging.getLogger("wzml.callbacks")
 
@@ -14,7 +17,6 @@ _callback_handlers: Dict[str, Callable] = {}
 
 
 def callback_handler(pattern: str):
-    
     def decorator(func: Callable):
         _callback_handlers[pattern] = func
         return func
@@ -41,12 +43,11 @@ async def status_pages(client: Client, callback: types.CallbackQuery):
             await delete_message(callback.message)
             return
 
-        import pyrogram
-        from bots.clients.telegram.helpers.message_utils import edit_message, delete_message
-
-        await edit_message(
-            callback.message, msg, reply_markup
+        from bots.clients.telegram.helpers.message_utils import (
+            edit_message,
         )
+
+        await edit_message(callback.message, msg, reply_markup)
         await callback.answer()
     except Exception as e:
         logger.error(f"Status callback error: {e}")
@@ -68,12 +69,11 @@ async def status_refresh(client: Client, callback: types.CallbackQuery):
             await delete_message(callback.message)
             return
 
-        import pyrogram
-        from bots.clients.telegram.helpers.message_utils import edit_message, delete_message
-
-        await edit_message(
-            callback.message, msg, reply_markup
+        from bots.clients.telegram.helpers.message_utils import (
+            edit_message,
         )
+
+        await edit_message(callback.message, msg, reply_markup)
         await callback.answer()
     except Exception as e:
         if "Message is not modified" not in str(e):
@@ -137,61 +137,70 @@ async def edit_bot_settings(client: Client, callback: types.CallbackQuery):
 
 
 @callback_handler(r"^userset\s+(\d+)\s+(\w+)(?:\s+(.+))?$")
-async def edit_user_settings(client: Client, callback: types.CallbackQuery):    
+async def edit_user_settings(client: Client, callback: types.CallbackQuery):
     """Handle user settings callbacks"""
     try:
         match = re.match(r"^userset\s+(\d+)\s+(\w+)(?:\s+(.+))?$", callback.data)
         if not match:
             await callback.answer("Invalid format!", show_alert=True)
             return
-            
+
         user_id = int(match.group(1))
         action = match.group(2)
         param = match.group(3) if match.group(3) else None
-        
+
         if callback.from_user.id != user_id:
-            await callback.answer("You cannot edit another user's settings!", show_alert=True)
+            await callback.answer(
+                "You cannot edit another user's settings!", show_alert=True
+            )
             return
-        
+
         async def refresh_menu(stype: str = "main"):
             msg_text, buttons = await get_user_settings(callback.from_user, stype)
-            await edit_message(
-                callback.message, 
-                msg_text, 
-                buttons
-            )
-        
+            await edit_message(callback.message, msg_text, buttons)
+
         await callback.answer()
-        
+
         if action == "close":
             await delete_message(callback.message)
-            
+
         elif action == "toggle" and param:
-            from bots.clients.telegram.helpers.user_utils import update_user_ldata, get_user_data
+            from bots.clients.telegram.helpers.user_utils import (
+                get_user_data,
+                update_user_ldata,
+            )
+
             user_data = await get_user_data(user_id)
             current_value = user_data.get(param, False)
             await update_user_ldata(user_id, param, not current_value)
             await refresh_menu("main")
-            
+
         elif action in ["set", "file"] and param:
             from bots.clients.telegram.helpers.user_utils import user_settings_text
+
             if param in user_settings_text:
                 prompt_text = user_settings_text[param][2]
-                await edit_message(
-                    callback.message,
-                    f"{prompt_text}"
-                )
+                await edit_message(callback.message, f"{prompt_text}")
+
                 async def save_and_refresh():
                     await refresh_menu("main")
+
                 client.loop.create_task(
-                    check_user_input(client, user_id, callback.message.chat.id, callback.message, param, save_and_refresh)
+                    check_user_input(
+                        client,
+                        user_id,
+                        callback.message.chat.id,
+                        callback.message,
+                        param,
+                        save_and_refresh,
+                    )
                 )
             else:
                 await callback.answer("Invalid setting!", show_alert=True)
-                
+
         else:
             await refresh_menu(action)
-            
+
     except Exception as e:
         logger.error(f"User settings callback error: {e}")
         await callback.answer("Error", show_alert=True)
@@ -227,10 +236,12 @@ async def cancel_all_update(client: Client, callback: types.CallbackQuery):
         handler = StatusHandler()
         msg, reply_markup = await handler.get_status_message(user_filter=None, page=1)
         if msg:
-            from bots.clients.telegram.helpers.message_utils import edit_message, delete_message
-            await edit_message(
-                callback.message, msg, reply_markup
+            from bots.clients.telegram.helpers.message_utils import (
+                delete_message,
+                edit_message,
             )
+
+            await edit_message(callback.message, msg, reply_markup)
         else:
             await delete_message(callback.message)
 
@@ -335,8 +346,9 @@ async def register_callbacks(client: Client) -> bool:
     try:
         for pattern, handler in _callback_handlers.items():
             client.add_handler(
-                pyrogram.handlers.CallbackQueryHandler(handler),
-                filters=re.compile(pattern),
+                pyrogram.handlers.CallbackQueryHandler(
+                    handler, filters=filters.regex(pattern)
+                )
             )
         logger.info(f"Registered {len(_callback_handlers)} callback handlers")
         return True

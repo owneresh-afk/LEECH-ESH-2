@@ -30,7 +30,9 @@ class Aria2Downloader(DownloaderPlugin):
         self, rpc_url: str = "http://localhost:6800/jsonrpc", secret: str = None
     ) -> bool:
         try:
-            self._client = await Aria2WebsocketClient.new(rpc_url, token=secret if secret else None)
+            self._client = await Aria2WebsocketClient.new(
+                rpc_url, token=secret if secret else None
+            )
             self._rpc_url = rpc_url
             self._secret = secret
             logger.info(f"Aria2 initialized: {rpc_url}")
@@ -93,7 +95,9 @@ class Aria2Downloader(DownloaderPlugin):
                     speed = int(download.get("downloadSpeed", 0))
                     downloaded = int(download.get("completedLength", 0))
                     total = int(download.get("totalLength", 0))
-                    eta = int((total - downloaded) / speed) if speed > 0 and total else 0
+                    eta = (
+                        int((total - downloaded) / speed) if speed > 0 and total else 0
+                    )
                     pct = (downloaded / total) * 100 if total else 0.0
 
                     await update_task_progress(
@@ -153,7 +157,7 @@ class Aria2Downloader(DownloaderPlugin):
                 files = download.get("files", [])
                 if files and files[0].get("path"):
                     name = os.path.basename(files[0]["path"])
-                    
+
             total = int(download.get("totalLength", 0))
             completed = int(download.get("completedLength", 0))
             progress = (completed / total * 100) if total else 0.0
@@ -274,7 +278,12 @@ class Aria2Downloader(DownloaderPlugin):
             return [
                 {
                     "gid": d.get("gid"),
-                    "name": d.get("bittorrent", {}).get("info", {}).get("name") or (os.path.basename(d["files"][0]["path"]) if d.get("files") and d["files"][0].get("path") else ""),
+                    "name": d.get("bittorrent", {}).get("info", {}).get("name")
+                    or (
+                        os.path.basename(d["files"][0]["path"])
+                        if d.get("files") and d["files"][0].get("path")
+                        else ""
+                    ),
                     "status": d.get("status"),
                 }
                 for d in downloads

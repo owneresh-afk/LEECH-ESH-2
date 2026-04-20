@@ -29,9 +29,7 @@ class PingHandler(BotHandler):
         message: types.Message,
     ) -> float:
         start = time.time()
-        msg = await send_message(
-            message,
-            "Pong!")
+        msg = await send_message(message, "Pong!")
         latency = (time.time() - start) * 1000
 
         uptime = datetime.now() - self._start_time
@@ -80,9 +78,7 @@ class StatsHandler(BotHandler):
         text += f"Queued: {queue_stats.pending}\n"
         text += f"Running: {queue_stats.running}"
 
-        await send_message(
-            message,
-            text)
+        await send_message(message, text)
 
         return stats
 
@@ -101,17 +97,13 @@ class LogHandler(BotHandler):
         log_dir = "logs"
 
         if not os.path.exists(log_dir):
-            await send_message(
-            message,
-            "No logs found!")
+            await send_message(message, "No logs found!")
             return ""
 
         log_files = [f for f in os.listdir(log_dir) if f.endswith(".log")]
 
         if not log_files:
-            await send_message(
-            message,
-            "No logs found!")
+            await send_message(message, "No logs found!")
             return ""
 
         latest_log = os.path.join(log_dir, sorted(log_files)[-1])
@@ -125,9 +117,7 @@ class LogHandler(BotHandler):
             log_text = log_text[-3500:]
 
         log_text = f"<pre>{log_text}</pre>"
-        await send_message(
-            message,
-            log_text)
+        await send_message(message, log_text)
 
         return log_text
 
@@ -142,19 +132,13 @@ class RestartHandler(BotHandler):
         mode: str = "bot",
     ) -> str:
         if mode == "bot":
-            await send_message(
-            message,
-            "Restarting Bot...")
+            await send_message(message, "Restarting Bot...")
             return "Bot restart initiated"
         elif mode == "services":
-            await send_message(
-            message,
-            "Restarting Services...")
+            await send_message(message, "Restarting Services...")
             return "Services restart initiated"
         elif mode == "all":
-            await send_message(
-            message,
-            "Restarting All...")
+            await send_message(message, "Restarting All...")
             return "Full restart initiated"
 
 
@@ -172,14 +156,12 @@ class ExecHandler(BotHandler):
 
         if not command:
             await send_message(
-            message,
-            "Send Shell Command along with /exec Command!",
+                message,
+                "Send Shell Command along with /exec Command!",
             )
             return ""
 
-        msg = await send_message(
-            message,
-            "Executing...")
+        msg = await send_message(message, "Executing...")
 
         try:
             result = subprocess.run(
@@ -203,9 +185,7 @@ class ExecHandler(BotHandler):
         except:
             pass
 
-        await send_message(
-            message,
-            output)
+        await send_message(message, output)
 
         return output
 
@@ -224,14 +204,10 @@ class ShellHandler(BotHandler):
         cmd = args.get("link", "")
 
         if not cmd:
-            await send_message(
-            message,
-            "Send Shell Command!")
+            await send_message(message, "Send Shell Command!")
             return ""
 
-        await send_message(
-            message,
-            f"Executing: {cmd}")
+        await send_message(message, f"Executing: {cmd}")
 
         try:
             process = await asyncio.create_subprocess_shell(
@@ -248,9 +224,7 @@ class ShellHandler(BotHandler):
             result = result[:3500] + "\n... (truncated)"
 
         result = f"<pre>{result}</pre>"
-        await send_message(
-            message,
-            result)
+        await send_message(message, result)
 
         return result
 
@@ -269,8 +243,8 @@ class BroadcastHandler(BotHandler):
 
         if not b_msg:
             await send_message(
-            message,
-            "Send message to broadcast!",
+                message,
+                "Send message to broadcast!",
             )
             return 0
 
@@ -281,7 +255,10 @@ class BroadcastHandler(BotHandler):
             users.add(task.user_id)
 
         count = 0
-        from bots.clients.telegram.helpers.message_utils import send_message as global_send_message
+        from bots.clients.telegram.helpers.message_utils import (
+            send_message as global_send_message,
+        )
+
         for user_id in users:
             try:
                 # Mock a message object to re-use send_message or use raw wrapped send

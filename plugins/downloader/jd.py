@@ -15,6 +15,7 @@ from core.exceptions import PluginExecutionError
 
 logger = logging.getLogger("wzml.jd_downloader")
 
+
 async def cmd_exec(cmd, shell=False):
     if shell:
         proc = await asyncio.create_subprocess_shell(
@@ -30,6 +31,7 @@ async def cmd_exec(cmd, shell=False):
         )
     stdout, stderr = await proc.communicate()
     return stdout.decode().strip(), stderr.decode().strip(), proc.returncode
+
 
 class JDownloaderDownloader(DownloaderPlugin):
     name = "jd"
@@ -51,17 +53,17 @@ class JDownloaderDownloader(DownloaderPlugin):
 
     async def _boot_daemon(self, email: str, password: str):
         await cmd_exec(["pkill", "-9", "-f", "java"])
-        
+
         self._device_name = f"{random.randint(0, 1000)}@WZML-X"
         logger.info(f"Starting JDownloader... Device: {self._device_name}")
-        
+
         jdata = {
             "autoconnectenabledv2": True,
             "password": password,
             "devicename": self._device_name,
             "email": email,
         }
-        
+
         remote_data = {
             "localapiserverheaderaccesscontrollalloworigin": "",
             "deprecatedapiport": 3128,
@@ -76,16 +78,23 @@ class JDownloaderDownloader(DownloaderPlugin):
             "externinterfacelocalhostonly": False,
             "localapiserverheaderxxssprotection": "1; mode=block",
         }
-        
-        await self._write_config("/JDownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json", jdata)
-        await self._write_config("/JDownloader/cfg/org.jdownloader.api.RemoteAPIConfig.json", remote_data)
-        
+
+        await self._write_config(
+            "/JDownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json",
+            jdata,
+        )
+        await self._write_config(
+            "/JDownloader/cfg/org.jdownloader.api.RemoteAPIConfig.json", remote_data
+        )
+
         if not os.path.exists("/JDownloader/JDownloader.jar"):
             pattern = re.compile(r"JDownloader\.jar\.backup\.\d$")
             try:
                 for filename in os.listdir("/JDownloader"):
                     if pattern.match(filename):
-                        os.rename(f"/JDownloader/{filename}", "/JDownloader/JDownloader.jar")
+                        os.rename(
+                            f"/JDownloader/{filename}", "/JDownloader/JDownloader.jar"
+                        )
                         break
             except Exception:
                 pass
@@ -93,7 +102,7 @@ class JDownloaderDownloader(DownloaderPlugin):
             shutil.rmtree("/JDownloader/tmp", ignore_errors=True)
 
         cmd = "cpulimit -l 20 -- java -Xms256m -Xmx500m -Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8 -Djava.awt.headless=true -jar /JDownloader/JDownloader.jar"
-        
+
         async def _runner():
             while True:
                 _, __, code = await cmd_exec(cmd, shell=True)
@@ -116,7 +125,7 @@ class JDownloaderDownloader(DownloaderPlugin):
             await self._boot_daemon(email, password)
 
             myjd = MyJdApi(email, password)
-            
+
             # Wait for JD to boot and connect
             for _ in range(15):
                 if await myjd.connect():
@@ -129,14 +138,16 @@ class JDownloaderDownloader(DownloaderPlugin):
             # Wait for device to be online
             for _ in range(10):
                 devices = await myjd.list_devices()
-                device = next((d for d in devices if d.get("name") == self._device_name), None)
+                device = next(
+                    (d for d in devices if d.get("name") == self._device_name), None
+                )
                 if device:
                     device_id = device.get("id")
                     break
                 await asyncio.sleep(2)
 
             self._device = await myjd.get_device(device_id) if device_id else None
-            
+
             if self._device:
                 self._device_id = device_id
                 self._connected = True

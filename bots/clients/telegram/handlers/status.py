@@ -50,54 +50,62 @@ def get_progress_bar_string(pct: float) -> str:
 
 class StatusHandler(BotHandler):
     TASKS_PER_PAGE = 4
-    
+
     def __init__(self):
         super().__init__()
         self._active_status_messages = {}
 
     async def handle_ws_event(self, client: Client, event: dict):
-        if not hasattr(self, "_active_status_messages") or not self._active_status_messages:
+        if (
+            not hasattr(self, "_active_status_messages")
+            or not self._active_status_messages
+        ):
             return
 
         import time
+
         now = time.time()
-        
+
         # throttle UI updates to at most once per 2.5 seconds roughly
         if not hasattr(self, "_last_ws_update"):
             self._last_ws_update = 0
-            
+
         if now - self._last_ws_update < 2.5:
             return
-            
+
         self._last_ws_update = now
-        
+
         for msg_id, data in list(self._active_status_messages.items()):
             chat_id = data["chat_id"]
             user_filter = data["user_filter"]
             page = data["page"]
             msg_obj = data["message_obj"]
-            
+
             try:
-                text, reply_markup = await self.get_status_message(user_filter=user_filter, page=page)
-                
+                text, reply_markup = await self.get_status_message(
+                    user_filter=user_filter, page=page
+                )
+
                 # Check if it actually changed to avoid MessageNotModified exceptions
                 if text != data.get("last_text"):
                     from bots.clients.telegram.helpers.message_utils import edit_message
+
                     await edit_message(
                         message=chat_id,
                         message_id=msg_id,
                         text=text,
                         buttons=reply_markup,
-                        parse_mode=enums.ParseMode.HTML
+                        parse_mode=enums.ParseMode.HTML,
                     )
-                    self._active_status_messages[msg_id] = {
-                        **data,
-                        "last_text": text
-                    }
+                    self._active_status_messages[msg_id] = {**data, "last_text": text}
             except Exception as e:
                 # if message is deleted by user or bot, pop it
                 err_str = str(e).lower()
-                if "invalid" in err_str or "deleted" in err_str or "not found" in err_str:
+                if (
+                    "invalid" in err_str
+                    or "deleted" in err_str
+                    or "not found" in err_str
+                ):
                     logger.debug(f"Removing dead status tracking for msg {msg_id}: {e}")
                     self._active_status_messages.pop(msg_id, None)
 
@@ -136,7 +144,7 @@ class StatusHandler(BotHandler):
                 "message_obj": sent,
                 "user_filter": user_filter,
                 "page": 1,
-                "last_text": msg
+                "last_text": msg,
             }
 
         return "Status sent"
@@ -180,23 +188,19 @@ class StatusHandler(BotHandler):
     def _format_task(self, index: int, task: dict) -> str:
         config = task.get("config", {})
         source = config.get("source", "")
-        name = (
-            config.get("destination")
-            or source.split("/")[-1]
-            or source
-        )
+        name = config.get("destination") or source.split("/")[-1] or source
         if len(name) > 50:
             name = name[:47] + "..."
 
         msg = f"<b>{index}.</b> <b><i>{name}</i></b>\n"
-        
+
         meta = config.get("metadata", {}).get("ui_data", {})
         if meta and meta.get("mention"):
             msg += f"<b>Task By {meta['mention']}</b> ( #ID{meta['user_id']} ) <i>[<a href='{meta['message_link']}'>Link</a>]</i>\n"
 
         prog = task.get("progress", {})
         pct = prog.get("progress", 0.0)
-        
+
         msg += f"┟ {get_progress_bar_string(pct)} <i>{pct:.1f}%</i>\n"
 
         if prog:

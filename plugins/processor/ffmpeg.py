@@ -4,8 +4,8 @@ import os
 import re
 import time
 import json
-from typing import Any, Optional
 
+from core.bin_config import BinConfig
 from plugins.base import ProcessorPlugin, PluginContext, PluginResult
 
 logger = logging.getLogger("wzml.ffmpeg_processor")
@@ -16,15 +16,15 @@ class FFmpegProcessor(ProcessorPlugin):
     plugin_type = "processor"
 
     def __init__(self):
-        self._ffmpeg_path = "ffmpeg"
+        self._ffmpeg_path = BinConfig.FFMPEG_NAME
         self._ffprobe_path = "ffprobe"
         self._active_processes = {}
         self._time_regex = re.compile(r"time=(?P<time>[\d:\.]+)")
 
     async def initialize(
-        self, ffmpeg_path: str = "ffmpeg", ffprobe_path: str = "ffprobe"
+        self, ffmpeg_path: str = None, ffprobe_path: str = "ffprobe"
     ) -> bool:
-        self._ffmpeg_path = ffmpeg_path
+        self._ffmpeg_path = ffmpeg_path or BinConfig.FFMPEG_NAME
         self._ffprobe_path = ffprobe_path
         try:
             # Check if ffmpeg is available
@@ -39,7 +39,7 @@ class FFmpegProcessor(ProcessorPlugin):
                 logger.info("FFmpeg processor initialized")
                 return True
             else:
-                logger.error("ffmpeg binary not found in PATH")
+                logger.error(f"{BinConfig.FFMPEG_NAME} binary not found in PATH")
                 return False
         except Exception as e:
             logger.error(f"FFmpeg init error: {e}")

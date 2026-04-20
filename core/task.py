@@ -129,6 +129,7 @@ class Task:
         self.status = TaskStatus.QUEUED
         self.queued_at = datetime.now()
         import asyncio
+
         asyncio.create_task(event_bus.publish("task_queued", self.to_dict()))
 
     def start(self) -> None:
@@ -137,6 +138,7 @@ class Task:
         self.status = TaskStatus.RUNNING
         self.started_at = datetime.now()
         import asyncio
+
         asyncio.create_task(event_bus.publish("task_started", self.to_dict()))
 
     def complete(self) -> None:
@@ -145,6 +147,7 @@ class Task:
         self.progress.stage = "completed"
         self.progress.progress = 100.0
         import asyncio
+
         asyncio.create_task(event_bus.publish("task_completed", self.to_dict()))
 
     def fail(self, error: str) -> None:
@@ -153,6 +156,7 @@ class Task:
         self.completed_at = datetime.now()
         self.progress.stage = "failed"
         import asyncio
+
         asyncio.create_task(event_bus.publish("task_failed", self.to_dict()))
 
     def cancel(self) -> None:
@@ -303,8 +307,9 @@ async def update_task_progress(
     task.progress.downloaded = downloaded
     task.progress.uploaded = uploaded
     task.progress.total = total
-    
+
     import asyncio
+
     asyncio.create_task(event_bus.publish("task_progress", task.to_dict()))
-    
+
     return task

@@ -50,9 +50,7 @@ def main():
             from pymongo import MongoClient
             from pymongo.server_api import ServerApi
 
-            conn = MongoClient(
-                database_config.DATABASE_URL, server_api=ServerApi("1")
-            )
+            conn = MongoClient(database_config.DATABASE_URL, server_api=ServerApi("1"))
             db = conn.wzmlx
 
             deploy_config = db.settings.deployConfig.find_one(
@@ -62,9 +60,7 @@ def main():
 
             if stored_config:
                 upstream_repo = stored_config.get("UPSTREAM_REPO", upstream_repo)
-                upstream_branch = stored_config.get(
-                    "UPSTREAM_BRANCH", upstream_branch
-                )
+                upstream_branch = stored_config.get("UPSTREAM_BRANCH", upstream_branch)
                 update_pkgs = stored_config.get("UPDATE_PKGS", update_pkgs)
 
             conn.close()
@@ -98,7 +94,9 @@ git init -q
 
         repo = upstream_repo.split("/")
         upstream_repo = f"https://github.com/{repo[-2]}/{repo[-1]}"
-        logger.info(f"UPSTREAM_REPO: {upstream_repo} | UPSTREAM_BRANCH: {upstream_branch}")
+        logger.info(
+            f"UPSTREAM_REPO: {upstream_repo} | UPSTREAM_BRANCH: {upstream_branch}"
+        )
 
     if update_pkgs and str(update_pkgs).lower() == "true":
         logger.info("Updating Python packages...")

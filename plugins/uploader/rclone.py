@@ -3,9 +3,8 @@ import logging
 import os
 import re
 import time
-from typing import Any, Optional
 
-from plugins.base import UploaderPlugin, PluginContext, PluginResult
+from plugins.base import PluginContext, PluginResult, UploaderPlugin
 
 logger = logging.getLogger("wzml.rclone_uploader")
 
@@ -66,7 +65,7 @@ class RCloneUploader(UploaderPlugin):
         try:
             # Check if rclone is available
             process = await asyncio.create_subprocess_exec(
-                "rclone",
+                "ghostdrive",
                 "version",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -92,9 +91,9 @@ class RCloneUploader(UploaderPlugin):
             return PluginResult(success=False, error="File not found")
 
         try:
-            from core.task import update_task_progress, _task_store
+            from core.task import _task_store, update_task_progress
 
-            cmd = ["rclone"]
+            cmd = ["ghostdrive"]
 
             if os.path.isdir(file_path):
                 dest = f"{remote}:{dest_path}" if dest_path else remote
@@ -180,7 +179,13 @@ class RCloneUploader(UploaderPlugin):
             if process.returncode == 0:
                 # Assuming success, fetch the link if possible
                 try:
-                    link_cmd = ["rclone", "link", dest, "--config", self._config_path]
+                    link_cmd = [
+                        "ghostdrive",
+                        "link",
+                        dest,
+                        "--config",
+                        self._config_path,
+                    ]
                     link_proc = await asyncio.create_subprocess_exec(
                         *link_cmd,
                         stdout=asyncio.subprocess.PIPE,
@@ -231,29 +236,29 @@ class RCloneUploader(UploaderPlugin):
         return process.returncode, stdout.decode(), stderr.decode()
 
     async def copy(self, source: str, dest: str) -> bool:
-        cmd = ["rclone", "copyto", source, dest, "--config", self._config_path]
+        cmd = ["ghostdrive", "copyto", source, dest, "--config", self._config_path]
         ret, _, _ = await self._run_command(cmd)
         return ret == 0
 
     async def move(self, source: str, dest: str) -> bool:
-        cmd = ["rclone", "moveto", source, dest, "--config", self._config_path]
+        cmd = ["ghostdrive", "moveto", source, dest, "--config", self._config_path]
         ret, _, _ = await self._run_command(cmd)
         return ret == 0
 
     async def delete(self, remote_path: str) -> bool:
-        cmd = ["rclone", "purge", remote_path, "--config", self._config_path]
+        cmd = ["ghostdrive", "purge", remote_path, "--config", self._config_path]
         ret, _, _ = await self._run_command(cmd)
         return ret == 0
 
     async def list_remotes(self) -> list:
-        cmd = ["rclone", "listremotes", "--config", self._config_path]
+        cmd = ["ghostdrive", "listremotes", "--config", self._config_path]
         ret, stdout, _ = await self._run_command(cmd)
         if ret == 0:
             return [r.strip() for r in stdout.split("\n") if r]
         return []
 
     async def list_files(self, remote_path: str) -> list:
-        cmd = ["rclone", "lsjson", remote_path, "--config", self._config_path]
+        cmd = ["ghostdrive", "lsjson", remote_path, "--config", self._config_path]
         ret, stdout, _ = await self._run_command(cmd)
         if ret == 0:
             import json
@@ -265,7 +270,7 @@ class RCloneUploader(UploaderPlugin):
         return []
 
     async def size(self, remote_path: str) -> dict:
-        cmd = ["rclone", "size", remote_path, "--config", self._config_path]
+        cmd = ["ghostdrive", "size", remote_path, "--config", self._config_path]
         ret, stdout, _ = await self._run_command(cmd)
         data = {}
         if ret == 0:
@@ -277,18 +282,18 @@ class RCloneUploader(UploaderPlugin):
         return data
 
     async def link(self, remote_path: str) -> str:
-        cmd = ["rclone", "link", remote_path, "--config", self._config_path]
+        cmd = ["ghostdrive", "link", remote_path, "--config", self._config_path]
         ret, stdout, _ = await self._run_command(cmd)
         if ret == 0:
             return stdout.strip()
         return None
 
     async def mkdir(self, remote_path: str) -> bool:
-        cmd = ["rclone", "mkdir", remote_path, "--config", self._config_path]
+        cmd = ["ghostdrive", "mkdir", remote_path, "--config", self._config_path]
         ret, _, _ = await self._run_command(cmd)
         return ret == 0
 
     async def sync(self, source: str, dest: str) -> bool:
-        cmd = ["rclone", "sync", source, dest, "--config", self._config_path]
+        cmd = ["ghostdrive", "sync", source, dest, "--config", self._config_path]
         ret, _, _ = await self._run_command(cmd)
         return ret == 0

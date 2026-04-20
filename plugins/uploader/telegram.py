@@ -110,21 +110,32 @@ class TelegramUploader(UploaderPlugin):
                         )
                         last_update = now
 
-                from bots.clients.telegram.helpers.message_utils import send_photo, send_video, send_audio, send_document
+                from bots.clients.telegram.helpers.message_utils import (
+                    send_photo,
+                    send_video,
+                    send_audio,
+                    send_document,
+                )
 
                 flags = context.metadata.get("flags", {})
-                force_document = "-d" in flags or "-doc" in flags or "-document" in flags
+                force_document = (
+                    "-d" in flags or "-doc" in flags or "-document" in flags
+                )
                 force_media = "-m" in flags or "-med" in flags or "-media" in flags
 
                 logger.info(f"Uploading to Telegram: {part_name}")
-                if not force_document and (force_media or file_ext in [".jpg", ".jpeg", ".png", ".gif"]):
+                if not force_document and (
+                    force_media or file_ext in [".jpg", ".jpeg", ".png", ".gif"]
+                ):
                     msg = await send_photo(
                         chat_id=chat_id,
                         photo=part_path,
                         caption=part_caption,
                         progress=progress_callback,
                     )
-                elif not force_document and (force_media or file_ext in [".mp4", ".mkv", ".avi", ".mov", ".webm"]):
+                elif not force_document and (
+                    force_media or file_ext in [".mp4", ".mkv", ".avi", ".mov", ".webm"]
+                ):
                     msg = await send_video(
                         chat_id=chat_id,
                         video=part_path,
@@ -132,7 +143,9 @@ class TelegramUploader(UploaderPlugin):
                         progress=progress_callback,
                         supports_streaming=True,
                     )
-                elif not force_document and (force_media or file_ext in [".mp3", ".ogg", ".m4a", ".wav", ".flac"]):
+                elif not force_document and (
+                    force_media or file_ext in [".mp3", ".ogg", ".m4a", ".wav", ".flac"]
+                ):
                     msg = await send_audio(
                         chat_id=chat_id,
                         audio=part_path,
