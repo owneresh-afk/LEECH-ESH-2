@@ -12,9 +12,21 @@ Unified entry point that starts:
 
 import asyncio
 import logging
+import os
 import signal
 import sys
+import traceback
+import uvicorn
+from subprocess import run as srun
 from typing import Optional
+
+from api.main import app
+from bots.clients.telegram.client import TelegramClient
+from config import get_config
+from core.registry import get_registry
+from core.worker import WorkerPool
+from db.mongodb import init_mongodb
+from plugins.loader import load_all_plugins
 
 logging.basicConfig(
     format="[%(asctime)s] [%(levelname)s] - %(message)s",
@@ -22,6 +34,14 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger("wzml.main")
+
+
+class BinConfig:
+    ARIA2_NAME = "blitzfetcher"
+    QBIT_NAME = "stormtorrent"
+    FFMPEG_NAME = "mediaforge"
+    RCLONE_NAME = "ghostdrive"
+    SABNZBD_NAME = "newsripper"
 
 
 class WZMLApp:
@@ -42,6 +62,8 @@ class WZMLApp:
         try:
             await self.load_config()
             logger.info("[OK] Configuration loaded")
+
+            await self.start_daemons()
 
             await self.connect_database()
             logger.info("[OK] Database connected")
@@ -74,23 +96,42 @@ class WZMLApp:
 
         except Exception as e:
             logger.error(f"Failed to start: {e}")
-            import traceback
-
             traceback.print_exc()
             return False
 
     async def load_config(self):
-        from config import get_config
-
         self.config = get_config()
         if not self.config.telegram.BOT_TOKEN:
             logger.warning("BOT_TOKEN not configured - bot will not start")
 
+    async def start_daemons(self):
+        try:
+            qbit_name = BinConfig.QBIT_NAME
+            aria2_name = BinConfig.ARIA2_NAME
+            sabnzbd_name = BinConfig.SABNZBD_NAME
+
+            logger.info("Starting background daemons (qBittorrent, Aria2, SABnzbd)...")
+            
+            cwd = os.getcwd()
+            srun([qbit_name, "-d", f"--profile={cwd}"], check=False)
+            logger.info("[OK] qBittorrent daemon started")
+            
+            if not os.path.exists(".netrc"):
+                with open(".netrc", "w") as f:
+                    pass
+            
+            proc = await asyncio.create_subprocess_shell(
+                f"chmod 600 .netrc && cp .netrc /root/.netrc && chmod +x setpkgs.sh && ./setpkgs.sh {aria2_name} {sabnzbd_name}"
+            )
+            await proc.wait()
+            logger.info("[OK] Aria2 and Sabnzbd daemons started via setpkgs.sh")
+            
+        except Exception as e:
+            logger.error(f"Failed to start daemons: {e}")
+
     async def connect_database(self):
         if self.config.database.DATABASE_URL:
             try:
-                from db.mongodb import init_mongodb
-
                 await init_mongodb()
                 logger.info("MongoDB connected")
             except Exception as e:
@@ -99,9 +140,6 @@ class WZMLApp:
             logger.warning("DATABASE_URL not set - using in-memory storage")
 
     async def load_plugins(self):
-        from plugins.loader import load_all_plugins
-        from core.registry import get_registry
-
         loaded = load_all_plugins()
         logger.info(f"Loaded {loaded} plugins dynamically")
 
@@ -124,8 +162,6 @@ class WZMLApp:
         logger.info(f"Successfully initialized {initialized_count} plugins")
 
     async def start_workers(self):
-        from core.worker import WorkerPool
-
         self.workers = WorkerPool(max_workers=self.config.limits.MAX_WORKERS or 4)
         await self.workers.start()
         logger.info(
@@ -133,9 +169,6 @@ class WZMLApp:
         )
 
     async def start_api(self):
-        import uvicorn
-        from api.main import app
-
         config = uvicorn.Config(
             app=app,
             host=self.config.limits.API_HOST or "0.0.0.0",
@@ -155,8 +188,6 @@ class WZMLApp:
             return
 
         try:
-            from bots.clients.telegram.client import TelegramClient
-
             self.bot = TelegramClient(self.config.telegram.BOT_TOKEN)
             await self.bot.start(self.config.telegram.BOT_TOKEN)
 
@@ -219,7 +250,5 @@ if __name__ == "__main__":
         logger.info("Interrupted")
     except Exception as e:
         logger.error(f"Fatal error: {e}")
-        import traceback
-
         traceback.print_exc()
         sys.exit(1)

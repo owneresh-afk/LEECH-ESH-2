@@ -7,7 +7,7 @@ from bots.clients.telegram.helpers.message_utils import arg_parser
 from bots.clients.telegram.helpers.button_utils import ButtonMaker
 from pyrogram import Client, types
 from bots.clients.telegram.handlers import BotHandler
-from bots.clients.telegram.helpers.message_utils import send_message
+from bots.clients.telegram.helpers.message_utils import send_message, delete_message, delete_message
 
 SUDO_USERS = []
 
@@ -32,52 +32,19 @@ class UserSettingsHandler(BotHandler):
         self,
         client: Client,
         message: types.Message,
-        action: str = "menu",
     ) -> str:
-        args = arg_parser(message.text)
-        option = args.get("link", "")
-
-        if action == "menu":
-            text = "User Settings\n\nSelect an option:\n\n"
-            text += "1. General Settings\n"
-            text += "2. Mirror Settings\n"
-            text += "3. Leech Settings\n"
-            text += "4. Uphoster Settings\n"
-            text += "5. FF Media Settings\n"
-            text += "6. Advanced Settings"
-
-            buttons = ButtonMaker()
-            buttons.data_button("1", "uset general")
-            buttons.data_button("2", "uset mirror")
-            buttons.data_button("3", "uset leech")
-            buttons.data_button("4", "uset uphoster")
-            buttons.data_button("5", "uset ffset")
-            buttons.data_button("6", "uset advanced")
-            reply_markup = buttons.build_menu(2)
-
-            await send_message(
+        from bots.clients.telegram.helpers.settings_menu import get_user_settings
+        import pyrogram
+        
+        msg_text, buttons = await get_user_settings(message.from_user, "main")
+        
+        await send_message(
             message,
-            text, reply_markup)
-
-        elif action == "get":
-            text = "Use /usetting menu"
-            await send_message(
-            message,
-            text)
-
-        elif action == "set":
-            await send_message(
-            message,
-            "Send setting key=value\n\nExample: THUMBNAIL=true",
-            )
-
-        else:
-            text = "Use /usetting menu"
-            await send_message(
-            message,
-            text)
-
-        return text
+            msg_text,
+            buttons
+        )
+        
+        return "menu"
 
 
 class BotSettingsHandler(BotHandler):

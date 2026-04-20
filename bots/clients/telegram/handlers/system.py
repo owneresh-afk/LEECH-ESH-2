@@ -262,12 +262,12 @@ class BroadcastHandler(BotHandler):
         self,
         client: Client,
         message: types.Message,
-        message: str = None,
+        broadcast_text: str = None,
     ) -> int:
         args = arg_parser(message.text)
-        message = args.get("link", "") or message
+        b_msg = args.get("link", "") or broadcast_text
 
-        if not message:
+        if not b_msg:
             await send_message(
             message,
             "Send message to broadcast!",
@@ -281,9 +281,11 @@ class BroadcastHandler(BotHandler):
             users.add(task.user_id)
 
         count = 0
+        from bots.clients.telegram.helpers.message_utils import send_message as global_send_message
         for user_id in users:
             try:
-                await client.send_message(user_id, message)
+                # Mock a message object to re-use send_message or use raw wrapped send
+                await client.send_message(user_id, b_msg)
                 count += 1
             except Exception as e:
                 logger.error(f"Broadcast to {user_id} failed: {e}")
