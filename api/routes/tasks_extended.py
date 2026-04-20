@@ -27,6 +27,54 @@ class BulkLinksRequest(BaseModel):
     pipeline_id: str = "download_upload"
 
 
+def build_custom_pipeline(
+    source: str,
+    is_leech: bool = False,
+    is_qbit: bool = False,
+    metadata: dict | None = None,
+) -> str:
+    import uuid
+    from core.pipeline import create_pipeline
+    
+    metadata = metadata or {}
+    flags = metadata.get("flags", {})
+    is_jd = metadata.get("is_jd", False)
+    is_nzb = metadata.get("is_nzb", False)
+    
+    stages = []
+    
+    # 1. Downloader
+    if is_qbit:
+        stages.append({"plugin": "downloader.qbit", "action": "download"})
+    elif is_jd:
+        stages.append({"plugin": "downloader.jd", "action": "download"})
+    elif is_nzb:
+        stages.append({"plugin": "downloader.nzb", "action": "download"})
+    elif "mega.nz" in source:
+        stages.append({"plugin": "downloader.mega", "action": "download"})
+    elif "drive.google.com" in source:
+        stages.append({"plugin": "downloader.gdrive", "action": "download"})
+    else:
+        stages.append({"plugin": "downloader.direct", "action": "download"})
+        
+    # 2. Processors
+    if flags.get("-e") or flags.get("-z"): # extract
+        stages.append({"plugin": "processor.extractor", "action": "extract", "on_error": "continue"})
+        
+    # generic processor to rename if needed
+    stages.append({"plugin": "processor.renamer", "action": "rename", "on_error": "continue"})
+    
+    # 3. Uploader
+    if is_leech:
+        stages.append({"plugin": "uploader.telegram", "action": "upload"})
+    else:
+        stages.append({"plugin": "uploader.gdrive", "action": "upload"})
+        
+    pipeline_id = f"dynamic_{uuid.uuid4().hex[:8]}"
+    create_pipeline(pipeline_id, f"Custom Pipeline", stages, custom=True)
+    return pipeline_id
+
+
 @router.post("/mirror", tags=["Mirror"])
 async def create_mirror_task(
     source: str,
@@ -37,19 +85,20 @@ async def create_mirror_task(
     mirror_mode: str = "",
     metadata: dict | None = None,
 ):
-    if is_qbit:
-        pipeline_id = "torrent_gdrive"
-    elif is_leech:
-        pipeline_id = "telegram_gdrive"
-    else:
-        pipeline_id = "download_upload"
+    metadata = metadata or {}
+    pipeline_id = build_custom_pipeline(
+        source=source,
+        is_leech=is_leech,
+        is_qbit=is_qbit,
+        metadata=metadata
+    )
 
     task = await create_task(
         source=source,
         pipeline_id=pipeline_id,
         user_id=user_id,
         destination=destination,
-        metadata=metadata or {},
+        metadata=metadata,
     )
 
     from core.queue import enqueue_task

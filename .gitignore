@@ -77,3 +77,6 @@ AGENTS.md
 .cursor/
 .cursorrules
 .github/prompts/**
+memories/
+docs/SKILL.md
+gen_scripts/SKILL.md
