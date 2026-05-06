@@ -74,7 +74,7 @@ class MergeVideos:
             task_dict[self._listener.mid] = MergeStatus(self._listener, self, gid)
         await update_status_message(self._listener.message.chat.id)
 
-        input_file = ospath.join(path, "input.txt")
+        input_file = ospath.join(path, "madara.txt")
         async with aiopen(input_file, "w") as f:
             await f.write("\n".join(video_files))
 
