@@ -1110,7 +1110,6 @@ class TaskConfig:
         self.progress = False
         async with cpu_eater_lock:
             self.progress = True
-            LOGGER.info(f"Merging videos: {self.name}")
             await merger.merge(dl_path, gid)
         if self.is_cancelled:
             return False
