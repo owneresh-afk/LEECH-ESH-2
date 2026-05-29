@@ -1,6 +1,7 @@
 from asyncio import create_subprocess_exec, create_subprocess_shell, sleep
 from importlib import import_module
 from os import environ, getenv, path as ospath
+from time import time
 
 from aiofiles import open as aiopen
 from aiofiles.os import makedirs, remove, path as aiopath
@@ -65,14 +66,17 @@ async def update_aria2_options():
 async def update_nzb_options():
     if Config.USENET_SERVERS:
         LOGGER.info("Get SABnzbd options from server")
-        while True:
+        deadline = time() + 10
+        while time() < deadline:
             try:
                 no = (await sabnzbd_client.get_config())["config"]["misc"]
                 nzb_options.update(no)
-            except Exception:
+                return True
+            except Exception as e:
+                LOGGER.warning(f"SABnzbd config fetch failed: {e}")
                 await sleep(0.5)
-                continue
-            break
+        LOGGER.error("Failed to fetch SABnzbd options within 10 seconds")
+        return False
 
 
 async def load_settings():

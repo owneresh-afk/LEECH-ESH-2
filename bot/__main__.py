@@ -15,7 +15,7 @@ from .core.tg_client import TgClient
 
 
 async def main():
-    from asyncio import gather
+    from asyncio import create_task, gather
 
     from .core.startup import (
         load_configurations,
@@ -55,8 +55,8 @@ async def main():
     await gather(
         update_qb_options(),
         update_aria2_options(),
-        update_nzb_options(),
     )
+    create_task(update_nzb_options())
     from .core.jdownloader_booter import jdownloader
     from .helper.ext_utils.files_utils import clean_all
     from .helper.ext_utils.telegraph_helper import telegraph
