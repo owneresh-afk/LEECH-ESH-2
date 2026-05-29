@@ -7,7 +7,7 @@ from yt_dlp import YoutubeDL, DownloadError
 
 from .... import task_dict_lock, task_dict, user_data
 from ....core.config_manager import BinConfig
-from ...ext_utils.bot_utils import sync_to_async, async_to_sync
+from ...ext_utils.bot_utils import get_cookie_path, sync_to_async, async_to_sync
 from ...ext_utils.task_manager import (
     check_running_tasks,
     stop_duplicate_check,
@@ -80,13 +80,7 @@ class YoutubeDLHelper:
                 "extractor": lambda n: 3,
             },
         }
-        cookie_to_use = (
-            usr_cookie
-            if not self._listener.user_dict.get("USE_DEFAULT_COOKIE", False)
-            and (usr_cookie := self._listener.user_dict.get("USER_COOKIE_FILE", ""))
-            and ospath.exists(usr_cookie)
-            else "cookies.txt"
-        )
+        cookie_to_use = get_cookie_path(self._listener.user_dict)
         self.opts["cookiefile"] = cookie_to_use
         LOGGER.info(
             f"Using cookies.txt file: {cookie_to_use} | User ID : {self._listener.user_id}"

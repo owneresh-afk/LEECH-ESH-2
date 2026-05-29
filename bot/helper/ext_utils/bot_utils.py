@@ -7,6 +7,7 @@ from asyncio import (
 from asyncio.subprocess import PIPE
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
+from os import path as ospath
 
 from httpx import AsyncClient
 
@@ -23,6 +24,17 @@ from .telegraph_helper import telegraph
 COMMAND_USAGE = {}
 
 THREAD_POOL = ThreadPoolExecutor(max_workers=500)
+
+DEFAULT_COOKIE_PATH = "cookies.txt"
+
+
+def get_cookie_path(user_dict):
+    if user_dict.get("USE_DEFAULT_COOKIE", False):
+        return DEFAULT_COOKIE_PATH
+    usr_cookie = user_dict.get("USER_COOKIE_FILE", "")
+    if usr_cookie and ospath.exists(usr_cookie):
+        return usr_cookie
+    return DEFAULT_COOKIE_PATH
 
 
 class SetInterval:
