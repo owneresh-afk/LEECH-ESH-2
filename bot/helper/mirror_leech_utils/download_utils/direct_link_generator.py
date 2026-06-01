@@ -154,7 +154,7 @@ def direct_link_generator(link):
             if str(e).startswith("ERROR: No Direct link function found"):
                 return resolved
             raise
-    elif any(x in domain for x in debrid_link_supported_sites):
+    elif Config.DEBRID_LINK_API and any(x in domain for x in debrid_link_supported_sites):
         return debrid_link(link)
     elif "yadi.sk" in link or "disk.yandex." in link:
         return yandex_disk(link)
