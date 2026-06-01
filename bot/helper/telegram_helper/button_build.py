@@ -1,4 +1,5 @@
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.enums import ButtonStyle
 
 
 class ButtonMaker:
@@ -11,14 +12,14 @@ class ButtonMaker:
             "footer": [],
         }
 
-    def url_button(self, key, link, position=None):
+    def url_button(self, key, link, position=None, style=None):
         self.buttons[position if position in self.buttons else "default"].append(
-            InlineKeyboardButton(text=key, url=link)
+            InlineKeyboardButton(text=key, url=link, style=style or ButtonStyle.DEFAULT)
         )
 
-    def data_button(self, key, data, position=None):
+    def data_button(self, key, data, position=None, style=None):
         self.buttons[position if position in self.buttons else "default"].append(
-            InlineKeyboardButton(text=key, callback_data=data)
+            InlineKeyboardButton(text=key, callback_data=data, style=style or ButtonStyle.DEFAULT)
         )
 
     def build_menu(self, b_cols=1, h_cols=8, fb_cols=2, lb_cols=2, f_cols=8):
